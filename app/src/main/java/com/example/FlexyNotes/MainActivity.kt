@@ -25,11 +25,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -43,6 +41,7 @@ import com.example.FlexyNotes.ui.screens.NotesListScreen
 import com.example.FlexyNotes.ui.screens.SettingsScreen
 import com.example.FlexyNotes.ui.screens.TrashScreen
 import com.example.FlexyNotes.ui.theme.FlexyNotesreworkedTheme
+import com.example.FlexyNotes.viewmodel.MainViewModel
 import com.example.FlexyNotes.viewmodel.NotesViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -54,8 +53,11 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            // Transient state for UI testing, persistence comes next
-            var isOledMode by remember { mutableStateOf(true) }
+            // Hole das MainViewModel über Hilt
+            val mainViewModel: MainViewModel = hiltViewModel()
+
+            // Beobachte den DataStore Status
+            val isOledMode by mainViewModel.isOledMode.collectAsState()
 
             FlexyNotesreworkedTheme(isOledMode = isOledMode) {
                 Surface(
@@ -64,7 +66,9 @@ class MainActivity : ComponentActivity() {
                 ) {
                     FlexyNotesNavigation(
                         isOledMode = isOledMode,
-                        onOledModeChange = { isOledMode = it }
+                        onOledModeChange = { newMode ->
+                            mainViewModel.updateOledMode(newMode)
+                        }
                     )
                 }
             }
