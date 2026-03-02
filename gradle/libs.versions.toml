@@ -1,6 +1,6 @@
 [versions]
-agp = "8.13.2"
-kotlin = "2.0.0"
+agp = "9.0.1"
+kotlin = "2.0.21"
 coreKtx = "1.13.1"
 junit = "4.13.2"
 junitVersion = "1.2.1"
@@ -8,10 +8,12 @@ espressoCore = "3.6.1"
 lifecycleRuntimeKtx = "2.8.4"
 activityCompose = "1.9.1"
 composeBom = "2024.06.00"
-room = "2.6.1"
+room = "2.8.4"
 navigationCompose = "2.7.7"
 coil = "2.7.0"
-ksp = "2.0.0-1.0.21"
+ksp = "2.0.21-1.0.27"
+hilt = "2.55"
+hiltNavigationCompose = "1.2.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -36,9 +38,14 @@ room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 
+hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
+hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
+hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
+
 [plugins]
 # Komplett neue, sichere Namen um jeglichen Konflikt zu vermeiden
 myAppPlugin = { id = "com.android.application", version.ref = "agp" }
 myKotlinPlugin = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 myComposePlugin = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 myKspPlugin = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
