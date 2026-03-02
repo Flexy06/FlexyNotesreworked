@@ -11,11 +11,12 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface NoteDao {
 
-    // Only fetch notes that are NOT in the trash
-    @Query("SELECT * FROM notes WHERE isDeleted = 0 ORDER BY modifiedAt DESC")
-    fun getAllNotes(): Flow<List<NoteEntity>>
+    @Query("SELECT * FROM notes WHERE isDeleted = 0 AND isArchived = 0 ORDER BY modifiedAt DESC")
+    fun getActiveNotes(): Flow<List<NoteEntity>>
 
-    // Fetch only deleted notes for the trash bin screen
+    @Query("SELECT * FROM notes WHERE isArchived = 1 AND isDeleted = 0 ORDER BY modifiedAt DESC")
+    fun getArchivedNotes(): Flow<List<NoteEntity>>
+
     @Query("SELECT * FROM notes WHERE isDeleted = 1 ORDER BY modifiedAt DESC")
     fun getDeletedNotes(): Flow<List<NoteEntity>>
 
@@ -28,11 +29,9 @@ interface NoteDao {
     @Update
     suspend fun updateNote(note: NoteEntity)
 
-    // Hard delete from database
     @Delete
     suspend fun deleteNote(note: NoteEntity)
 
-    // Empty the trash bin
     @Query("DELETE FROM notes WHERE isDeleted = 1")
     suspend fun clearTrash()
 }

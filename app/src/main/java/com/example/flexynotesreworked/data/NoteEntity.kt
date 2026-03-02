@@ -13,6 +13,6 @@ data class NoteEntity(
     val createdAt: Long,
     val modifiedAt: Long,
     val colorArgb: Int? = null,
-    // Soft delete flag for the trash bin functionality
-    val isDeleted: Boolean = false
+    val isDeleted: Boolean = false,
+    val isArchived: Boolean = false
 )

@@ -16,7 +16,14 @@ class NotesViewModel @Inject constructor(
     private val repository: NoteRepository
 ) : ViewModel() {
 
-    val notes: StateFlow<List<NoteEntity>> = repository.allNotes
+    val activeNotes: StateFlow<List<NoteEntity>> = repository.activeNotes
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    val archivedNotes: StateFlow<List<NoteEntity>> = repository.archivedNotes
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -30,7 +37,6 @@ class NotesViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    // Fetches a single note for the editor
     suspend fun getNoteById(id: Long): NoteEntity? {
         return repository.getNoteById(id)
     }
@@ -47,7 +53,6 @@ class NotesViewModel @Inject constructor(
         }
     }
 
-    // Updates an existing note while preserving its ID and creation date
     fun updateNote(note: NoteEntity, newTitle: String, newContent: String) {
         viewModelScope.launch {
             val updatedNote = note.copy(
@@ -56,6 +61,18 @@ class NotesViewModel @Inject constructor(
                 modifiedAt = System.currentTimeMillis()
             )
             repository.upsertNote(updatedNote)
+        }
+    }
+
+    fun archiveNote(note: NoteEntity) {
+        viewModelScope.launch {
+            repository.archiveNote(note)
+        }
+    }
+
+    fun unarchiveNote(note: NoteEntity) {
+        viewModelScope.launch {
+            repository.unarchiveNote(note)
         }
     }
 

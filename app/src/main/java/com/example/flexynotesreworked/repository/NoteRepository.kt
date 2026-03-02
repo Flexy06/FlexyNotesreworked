@@ -10,27 +10,30 @@ import javax.inject.Singleton
 class NoteRepository @Inject constructor(
     private val noteDao: NoteDao
 ) {
-    // Stream of active notes (not in trash)
-    val allNotes: Flow<List<NoteEntity>> = noteDao.getAllNotes()
-
-    // Stream of deleted notes (trash bin)
+    val activeNotes: Flow<List<NoteEntity>> = noteDao.getActiveNotes()
+    val archivedNotes: Flow<List<NoteEntity>> = noteDao.getArchivedNotes()
     val deletedNotes: Flow<List<NoteEntity>> = noteDao.getDeletedNotes()
 
     suspend fun getNoteById(id: Long): NoteEntity? = noteDao.getNoteById(id)
 
     suspend fun upsertNote(note: NoteEntity) = noteDao.insertNote(note)
 
-    // Moves note to trash bin by updating the isDeleted flag
     suspend fun moveNoteToTrash(note: NoteEntity) {
         noteDao.updateNote(note.copy(isDeleted = true, modifiedAt = System.currentTimeMillis()))
     }
 
-    // Restores a note from the trash bin
+    suspend fun archiveNote(note: NoteEntity) {
+        noteDao.updateNote(note.copy(isArchived = true, modifiedAt = System.currentTimeMillis()))
+    }
+
+    suspend fun unarchiveNote(note: NoteEntity) {
+        noteDao.updateNote(note.copy(isArchived = false, modifiedAt = System.currentTimeMillis()))
+    }
+
     suspend fun restoreNote(note: NoteEntity) {
         noteDao.updateNote(note.copy(isDeleted = false, modifiedAt = System.currentTimeMillis()))
     }
 
-    // Permanently removes a note from the database
     suspend fun deletePermanently(note: NoteEntity) = noteDao.deleteNote(note)
 
     suspend fun clearTrash() = noteDao.clearTrash()

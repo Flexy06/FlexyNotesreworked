@@ -30,10 +30,10 @@ import com.example.flexynotesreworked.viewmodel.NotesViewModel
 @Composable
 fun NotesListScreen(
     viewModel: NotesViewModel,
-    // Optional ID parameter prepared for future editing feature
     onNavigateToEditor: (Long?) -> Unit
 ) {
-    val notes by viewModel.notes.collectAsState()
+    // Only fetch active notes here
+    val notes by viewModel.activeNotes.collectAsState()
 
     Scaffold(
         floatingActionButton = {
@@ -49,7 +49,7 @@ fun NotesListScreen(
                     .padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
-                Text("No notes yet. Create your first one!")
+                Text("No active notes. Create your first one!")
             }
         } else {
             LazyColumn(

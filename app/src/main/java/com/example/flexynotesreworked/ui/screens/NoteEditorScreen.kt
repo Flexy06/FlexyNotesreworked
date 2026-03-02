@@ -5,8 +5,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -36,9 +41,6 @@ fun NoteEditorScreen(
     var content by remember { mutableStateOf("") }
     var existingNote by remember { mutableStateOf<NoteEntity?>(null) }
 
-    // Gelöscht: val scrollState = rememberScrollState()
-    // Wir überlassen das Scrollen jetzt dem Textfeld selbst.
-
     LaunchedEffect(noteId) {
         if (noteId != null) {
             val note = viewModel.getNoteById(noteId)
@@ -55,6 +57,32 @@ fun NoteEditorScreen(
             TopAppBar(
                 title = { },
                 actions = {
+                    if (existingNote != null) {
+                        IconButton(
+                            onClick = {
+                                viewModel.archiveNote(existingNote!!)
+                                onNavigateBack()
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Archive,
+                                contentDescription = "Archive note"
+                            )
+                        }
+
+                        IconButton(
+                            onClick = {
+                                viewModel.moveToTrash(existingNote!!)
+                                onNavigateBack()
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Move to trash"
+                            )
+                        }
+                    }
+
                     Button(
                         onClick = {
                             if (title.isNotBlank() || content.isNotBlank()) {
@@ -79,7 +107,6 @@ fun NoteEditorScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .imePadding()
-                // Gelöscht: .verticalScroll(scrollState)
                 .padding(horizontal = 8.dp, vertical = 8.dp)
         ) {
             val transparentTextFieldColors = TextFieldDefaults.colors(
@@ -91,7 +118,6 @@ fun NoteEditorScreen(
                 disabledContainerColor = Color.Transparent
             )
 
-            // Titel-Feld bleibt oben fixiert
             TextField(
                 value = title,
                 onValueChange = { title = it },
@@ -108,7 +134,6 @@ fun NoteEditorScreen(
                 colors = transparentTextFieldColors
             )
 
-            // Inhalts-Feld nimmt den gesamten restlichen Platz ein (.weight(1f))
             TextField(
                 value = content,
                 onValueChange = { content = it },
@@ -121,7 +146,7 @@ fun NoteEditorScreen(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f), // <-- HIER IST DIE MAGIE
+                    .weight(1f),
                 textStyle = MaterialTheme.typography.bodyLarge,
                 colors = transparentTextFieldColors
             )

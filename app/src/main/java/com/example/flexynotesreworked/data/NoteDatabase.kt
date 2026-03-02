@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [NoteEntity::class],
-    version = 2, // Incremented version because of schema change
+    version = 3, // Incremented version to apply schema changes
     exportSchema = false
 )
 abstract class NoteDatabase : RoomDatabase() {
@@ -25,7 +25,6 @@ abstract class NoteDatabase : RoomDatabase() {
                     NoteDatabase::class.java,
                     "flexy_notes_db"
                 )
-                    // Wipes the database on version mismatch during development
                     .fallbackToDestructiveMigration()
                     .build()
                     .also { INSTANCE = it }
