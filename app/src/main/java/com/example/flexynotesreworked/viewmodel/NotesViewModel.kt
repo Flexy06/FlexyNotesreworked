@@ -16,8 +16,6 @@ class NotesViewModel @Inject constructor(
     private val repository: NoteRepository
 ) : ViewModel() {
 
-    // Converts the cold Flow from repository into a hot StateFlow for the UI
-    // The flow remains active for 5 seconds after the last subscriber leaves
     val notes: StateFlow<List<NoteEntity>> = repository.allNotes
         .stateIn(
             scope = viewModelScope,
@@ -25,13 +23,17 @@ class NotesViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    // Separate stream for notes marked as deleted
     val deletedNotes: StateFlow<List<NoteEntity>> = repository.deletedNotes
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
+
+    // Fetches a single note for the editor
+    suspend fun getNoteById(id: Long): NoteEntity? {
+        return repository.getNoteById(id)
+    }
 
     fun addNote(title: String, content: String) {
         viewModelScope.launch {
@@ -42,6 +44,18 @@ class NotesViewModel @Inject constructor(
                 modifiedAt = System.currentTimeMillis()
             )
             repository.upsertNote(newNote)
+        }
+    }
+
+    // Updates an existing note while preserving its ID and creation date
+    fun updateNote(note: NoteEntity, newTitle: String, newContent: String) {
+        viewModelScope.launch {
+            val updatedNote = note.copy(
+                title = newTitle,
+                content = newContent,
+                modifiedAt = System.currentTimeMillis()
+            )
+            repository.upsertNote(updatedNote)
         }
     }
 
