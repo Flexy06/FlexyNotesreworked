@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -25,7 +26,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -36,6 +40,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.FlexyNotes.ui.screens.ArchiveScreen
 import com.example.FlexyNotes.ui.screens.NoteEditorScreen
 import com.example.FlexyNotes.ui.screens.NotesListScreen
+import com.example.FlexyNotes.ui.screens.SettingsScreen
 import com.example.FlexyNotes.ui.screens.TrashScreen
 import com.example.FlexyNotes.ui.theme.FlexyNotesreworkedTheme
 import com.example.FlexyNotes.viewmodel.NotesViewModel
@@ -49,12 +54,18 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            FlexyNotesreworkedTheme(isOledMode = true) {
+            // Transient state for UI testing, persistence comes next
+            var isOledMode by remember { mutableStateOf(true) }
+
+            FlexyNotesreworkedTheme(isOledMode = isOledMode) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    FlexyNotesNavigation()
+                    FlexyNotesNavigation(
+                        isOledMode = isOledMode,
+                        onOledModeChange = { isOledMode = it }
+                    )
                 }
             }
         }
@@ -62,12 +73,14 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun FlexyNotesNavigation() {
+fun FlexyNotesNavigation(
+    isOledMode: Boolean,
+    onOledModeChange: (Boolean) -> Unit
+) {
     val navController = rememberNavController()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    // Track current route to highlight the selected item in the drawer
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: "notes_list"
 
@@ -85,7 +98,7 @@ fun FlexyNotesNavigation() {
 
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Edit, contentDescription = null) },
-                    label = { Text("Notes") },
+                    label = { Text("Notizen") },
                     selected = currentRoute == "notes_list",
                     onClick = {
                         navController.navigate("notes_list") {
@@ -97,7 +110,7 @@ fun FlexyNotesNavigation() {
                 )
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Archive, contentDescription = null) },
-                    label = { Text("Archive") },
+                    label = { Text("Archiv") },
                     selected = currentRoute == "archive",
                     onClick = {
                         navController.navigate("archive")
@@ -107,7 +120,7 @@ fun FlexyNotesNavigation() {
                 )
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Delete, contentDescription = null) },
-                    label = { Text("Trash") },
+                    label = { Text("Papierkorb") },
                     selected = currentRoute == "trash",
                     onClick = {
                         navController.navigate("trash")
@@ -115,6 +128,20 @@ fun FlexyNotesNavigation() {
                     },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                    label = { Text("Einstellungen") },
+                    selected = currentRoute == "settings",
+                    onClick = {
+                        navController.navigate("settings")
+                        scope.launch { drawerState.close() }
+                    },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+                Spacer(Modifier.height(16.dp))
             }
         },
         modifier = Modifier.systemBarsPadding()
@@ -149,6 +176,14 @@ fun FlexyNotesNavigation() {
                 val viewModel: NotesViewModel = hiltViewModel()
                 TrashScreen(
                     viewModel = viewModel,
+                    onOpenDrawer = { scope.launch { drawerState.open() } }
+                )
+            }
+
+            composable("settings") {
+                SettingsScreen(
+                    isOledMode = isOledMode,
+                    onOledModeChange = onOledModeChange,
                     onOpenDrawer = { scope.launch { drawerState.open() } }
                 )
             }
