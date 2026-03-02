@@ -22,6 +22,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "FlexyNotesreworked"
+rootProject.name = "FlexyNotes"
 include(":app")
  

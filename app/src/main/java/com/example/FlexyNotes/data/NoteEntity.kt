@@ -1,4 +1,4 @@
-package com.example.flexynotesreworked.data
+package com.example.FlexyNotes.data
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey

@@ -1,4 +1,4 @@
-package com.example.flexynotesreworked
+package com.example.FlexyNotes
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -33,12 +33,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.example.flexynotesreworked.ui.screens.ArchiveScreen
-import com.example.flexynotesreworked.ui.screens.NoteEditorScreen
-import com.example.flexynotesreworked.ui.screens.NotesListScreen
-import com.example.flexynotesreworked.ui.screens.TrashScreen
-import com.example.flexynotesreworked.ui.theme.FlexyNotesreworkedTheme
-import com.example.flexynotesreworked.viewmodel.NotesViewModel
+import com.example.FlexyNotes.ui.screens.ArchiveScreen
+import com.example.FlexyNotes.ui.screens.NoteEditorScreen
+import com.example.FlexyNotes.ui.screens.NotesListScreen
+import com.example.FlexyNotes.ui.screens.TrashScreen
+import com.example.FlexyNotes.ui.theme.FlexyNotesreworkedTheme
+import com.example.FlexyNotes.viewmodel.NotesViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 

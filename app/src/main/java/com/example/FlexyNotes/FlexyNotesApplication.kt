@@ -1,4 +1,4 @@
-package com.example.flexynotesreworked
+package com.example.FlexyNotes
 
 import android.app.Application
 import dagger.hilt.android.HiltAndroidApp

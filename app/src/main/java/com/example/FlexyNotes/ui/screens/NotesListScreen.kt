@@ -1,4 +1,4 @@
-package com.example.flexynotesreworked.ui.screens
+package com.example.FlexyNotes.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
@@ -6,6 +6,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,14 +15,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,12 +44,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.example.flexynotesreworked.viewmodel.NotesViewModel
+import com.example.FlexyNotes.viewmodel.NotesViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -55,11 +60,11 @@ fun NotesListScreen(
     onOpenDrawer: () -> Unit
 ) {
     val notes by viewModel.activeNotes.collectAsState()
-
-    // Set to keep track of selected notes for long-press actions
     var selectedNoteIds by remember { mutableStateOf(setOf<Long>()) }
 
-    // Clears selection when pressing the back button
+    // Remembers the view state even when rotating the screen
+    var isGridView by rememberSaveable { mutableStateOf(true) }
+
     if (selectedNoteIds.isNotEmpty()) {
         BackHandler {
             selectedNoteIds = emptySet()
@@ -69,7 +74,6 @@ fun NotesListScreen(
     Scaffold(
         topBar = {
             if (selectedNoteIds.isNotEmpty()) {
-                // Contextual Action Bar when items are selected
                 TopAppBar(
                     title = { Text("${selectedNoteIds.size} selected") },
                     navigationIcon = {
@@ -95,12 +99,20 @@ fun NotesListScreen(
                     }
                 )
             } else {
-                // Default TopAppBar
                 TopAppBar(
                     title = { Text("Notes") },
                     navigationIcon = {
                         IconButton(onClick = onOpenDrawer) {
                             Icon(Icons.Default.Menu, contentDescription = "Open menu")
+                        }
+                    },
+                    actions = {
+                        // Toggle button for grid/list view
+                        IconButton(onClick = { isGridView = !isGridView }) {
+                            Icon(
+                                imageVector = if (isGridView) Icons.Default.ViewAgenda else Icons.Default.GridView,
+                                contentDescription = "Toggle view"
+                            )
                         }
                     }
                 )
@@ -121,16 +133,20 @@ fun NotesListScreen(
                     .padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
-                Text("No active notes. Create your first one!")
+                Text("No active notes. Create your first one Amyyyyyyyy!")
             }
         } else {
-            LazyColumn(
+            // Replaced LazyColumn with LazyVerticalStaggeredGrid
+            LazyVerticalStaggeredGrid(
+                columns = StaggeredGridCells.Fixed(if (isGridView) 2 else 1),
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues),
-                contentPadding = PaddingValues(16.dp)
+                contentPadding = PaddingValues(16.dp),
+                // Handles spacing between items natively
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalItemSpacing = 8.dp
             ) {
-                // Key is required for SwipeToDismiss to correctly animate list changes
                 items(notes, key = { it.id }) { note ->
                     val isSelected = selectedNoteIds.contains(note.id)
 
@@ -138,7 +154,7 @@ fun NotesListScreen(
                         confirmValueChange = { dismissValue ->
                             if (dismissValue != SwipeToDismissBoxValue.Settled) {
                                 viewModel.archiveNote(note)
-                                true // Confirm dismissal
+                                true
                             } else {
                                 false
                             }
@@ -159,7 +175,7 @@ fun NotesListScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .padding(bottom = 8.dp)
+                                    // Removed hardcoded bottom padding since the Grid handles it
                                     .background(color, MaterialTheme.shapes.medium)
                                     .padding(horizontal = 20.dp),
                                 contentAlignment = Alignment.CenterStart
@@ -175,12 +191,10 @@ fun NotesListScreen(
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(bottom = 8.dp)
-                                    // combinedClickable replaces normal clickable
+                                    // Removed hardcoded bottom padding since the Grid handles it
                                     .combinedClickable(
                                         onClick = {
                                             if (selectedNoteIds.isNotEmpty()) {
-                                                // Toggle selection if action bar is active
                                                 selectedNoteIds = if (isSelected) selectedNoteIds - note.id else selectedNoteIds + note.id
                                             } else {
                                                 onNavigateToEditor(note.id)
@@ -192,8 +206,11 @@ fun NotesListScreen(
                                             }
                                         }
                                     ),
-                                // Give visual feedback when a note is selected
-                                border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
+                                border = if (isSelected) {
+                                    BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+                                } else {
+                                    BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                                },
                                 colors = CardDefaults.cardColors(
                                     containerColor = if (isSelected) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface
                                 )
@@ -208,7 +225,7 @@ fun NotesListScreen(
                                         Text(
                                             text = note.content,
                                             style = MaterialTheme.typography.bodyMedium,
-                                            maxLines = 2
+                                            maxLines = 5 // Limit lines in grid view to keep it compact
                                         )
                                     }
                                 }

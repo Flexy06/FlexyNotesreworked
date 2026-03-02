@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.flexynotesreworked"
+    namespace = "com.example.FlexyNotes"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.flexynotesreworked"
+        applicationId = "com.example.FlexyNotes"
         minSdk = 29
         targetSdk = 35
         versionCode = 1

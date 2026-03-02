@@ -1,4 +1,4 @@
-package com.example.flexynotesreworked.ui.screens
+package com.example.FlexyNotes.ui.screens
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,8 +27,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.example.flexynotesreworked.data.NoteEntity
-import com.example.flexynotesreworked.viewmodel.NotesViewModel
+import com.example.FlexyNotes.data.NoteEntity
+import com.example.FlexyNotes.viewmodel.NotesViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

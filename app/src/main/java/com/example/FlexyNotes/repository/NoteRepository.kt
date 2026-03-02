@@ -1,7 +1,7 @@
-package com.example.flexynotesreworked.repository
+package com.example.FlexyNotes.repository
 
-import com.example.flexynotesreworked.data.NoteDao
-import com.example.flexynotesreworked.data.NoteEntity
+import com.example.FlexyNotes.data.NoteDao
+import com.example.FlexyNotes.data.NoteEntity
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton

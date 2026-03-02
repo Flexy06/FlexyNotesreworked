@@ -1,5 +1,6 @@
-package com.example.flexynotesreworked.ui.screens
+package com.example.FlexyNotes.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,14 +15,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.flexynotesreworked.viewmodel.NotesViewModel
+import com.example.FlexyNotes.viewmodel.NotesViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ArchiveScreen(
     viewModel: NotesViewModel,
     onOpenDrawer: () -> Unit,
-    // Note: Parameter kept for compatibility with MainActivity, even if unused here now
     onNavigateToEditor: (Long) -> Unit
 ) {
     val archivedNotes by viewModel.archivedNotes.collectAsState()
@@ -59,8 +59,13 @@ fun ArchiveScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 8.dp)
-                            // Click now automatically unarchives the note and returns it to the main list
-                            .clickable { viewModel.unarchiveNote(note) }
+                            .clickable {
+                                // First unarchive the note, then open it in the editor
+                                viewModel.unarchiveNote(note)
+                                onNavigateToEditor(note.id)
+                            },
+                        // Keep consistent styling with the main list
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                     ) {
                         Row(
                             modifier = Modifier

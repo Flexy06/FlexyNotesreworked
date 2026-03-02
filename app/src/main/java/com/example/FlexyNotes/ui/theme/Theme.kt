@@ -1,4 +1,4 @@
-package com.example.flexynotesreworked.ui.theme
+package com.example.FlexyNotes.ui.theme
 
 import android.app.Activity
 import android.os.Build
