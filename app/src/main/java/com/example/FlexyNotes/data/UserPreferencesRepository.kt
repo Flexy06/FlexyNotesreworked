@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -12,7 +13,6 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
-// Extension property to create a single instance of DataStore
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 @Singleton
@@ -21,18 +21,45 @@ class UserPreferencesRepository @Inject constructor(
 ) {
     private companion object {
         val IS_OLED_MODE = booleanPreferencesKey("is_oled_mode")
+        val THEME_MODE = stringPreferencesKey("theme_mode")
+        val USE_DYNAMIC_COLOR = booleanPreferencesKey("use_dynamic_color")
+        val SORT_ORDER = stringPreferencesKey("sort_order")
+        val SHOW_TIMESTAMP = booleanPreferencesKey("show_timestamp")
+        val USE_HAPTICS = booleanPreferencesKey("use_haptics")
     }
 
-    // Exposes the current OLED mode setting as a Flow, defaults to true
-    val isOledMode: Flow<Boolean> = context.dataStore.data
+    val userPreferencesFlow: Flow<UserPreferences> = context.dataStore.data
         .map { preferences ->
-            preferences[IS_OLED_MODE] ?: true
+            UserPreferences(
+                isOledMode = preferences[IS_OLED_MODE] ?: true,
+                themeMode = ThemeMode.valueOf(preferences[THEME_MODE] ?: ThemeMode.SYSTEM.name),
+                useDynamicColor = preferences[USE_DYNAMIC_COLOR] ?: true,
+                sortOrder = SortOrder.valueOf(preferences[SORT_ORDER] ?: SortOrder.DATE_EDITED.name),
+                showTimestamp = preferences[SHOW_TIMESTAMP] ?: false,
+                useHaptics = preferences[USE_HAPTICS] ?: true
+            )
         }
 
-    // Updates the OLED mode setting in DataStore
-    suspend fun updateOledMode(isOled: Boolean) {
+    suspend fun updatePreferences(update: (UserPreferences) -> UserPreferences) {
         context.dataStore.edit { preferences ->
-            preferences[IS_OLED_MODE] = isOled
+
+            val current = UserPreferences(
+                isOledMode = preferences[IS_OLED_MODE] ?: true,
+                themeMode = ThemeMode.valueOf(preferences[THEME_MODE] ?: ThemeMode.SYSTEM.name),
+                useDynamicColor = preferences[USE_DYNAMIC_COLOR] ?: true,
+                sortOrder = SortOrder.valueOf(preferences[SORT_ORDER] ?: SortOrder.DATE_EDITED.name),
+                showTimestamp = preferences[SHOW_TIMESTAMP] ?: false,
+                useHaptics = preferences[USE_HAPTICS] ?: true
+            )
+            val updated = update(current)
+
+
+            preferences[IS_OLED_MODE] = updated.isOledMode
+            preferences[THEME_MODE] = updated.themeMode.name
+            preferences[USE_DYNAMIC_COLOR] = updated.useDynamicColor
+            preferences[SORT_ORDER] = updated.sortOrder.name
+            preferences[SHOW_TIMESTAMP] = updated.showTimestamp
+            preferences[USE_HAPTICS] = updated.useHaptics
         }
     }
 }

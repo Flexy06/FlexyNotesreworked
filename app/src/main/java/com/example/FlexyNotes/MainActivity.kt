@@ -38,6 +38,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.FlexyNotes.data.UserPreferences
 import com.example.FlexyNotes.ui.screens.ArchiveScreen
 import com.example.FlexyNotes.ui.screens.NoteEditorScreen
 import com.example.FlexyNotes.ui.screens.NotesListScreen
@@ -56,22 +57,18 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            // Hole das MainViewModel über Hilt
             val mainViewModel: MainViewModel = hiltViewModel()
+            val preferences by mainViewModel.preferences.collectAsState()
 
-            // Beobachte den DataStore Status
-            val isOledMode by mainViewModel.isOledMode.collectAsState()
-
-            FlexyNotesreworkedTheme(isOledMode = isOledMode) {
+            // Hinweis: Später passen wir das Theme hier an, um Light/Dark/Dynamic zu unterstützen
+            FlexyNotesreworkedTheme(isOledMode = preferences.isOledMode) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
                     FlexyNotesNavigation(
-                        isOledMode = isOledMode,
-                        onOledModeChange = { newMode ->
-                            mainViewModel.updateOledMode(newMode)
-                        }
+                        preferences = preferences,
+                        onUpdatePreferences = { update -> mainViewModel.updatePreferences(update) }
                     )
                 }
             }
@@ -81,8 +78,8 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun FlexyNotesNavigation(
-    isOledMode: Boolean,
-    onOledModeChange: (Boolean) -> Unit
+    preferences: UserPreferences,
+    onUpdatePreferences: ((UserPreferences) -> UserPreferences) -> Unit
 ) {
     val navController = rememberNavController()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -91,15 +88,12 @@ fun FlexyNotesNavigation(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: "notes_list"
 
-    // Zentraler State für die Grid-Ansicht (wird an alle Screens weitergegeben)
     var isGridView by rememberSaveable { mutableStateOf(true) }
-
-    // BUGFIX: Drawer deaktivieren, wenn wir uns im Editor befinden
     val gesturesEnabled = currentRoute?.startsWith("note_editor") == false
 
     ModalNavigationDrawer(
         drawerState = drawerState,
-        gesturesEnabled = gesturesEnabled, // Hier wird die Wischgeste kontrolliert
+        gesturesEnabled = gesturesEnabled,
         drawerContent = {
             ModalDrawerSheet {
                 Spacer(Modifier.height(32.dp))
@@ -115,9 +109,7 @@ fun FlexyNotesNavigation(
                     label = { Text("Notizen") },
                     selected = currentRoute == "notes_list",
                     onClick = {
-                        navController.navigate("notes_list") {
-                            popUpTo("notes_list") { inclusive = true }
-                        }
+                        navController.navigate("notes_list") { popUpTo("notes_list") { inclusive = true } }
                         scope.launch { drawerState.close() }
                     },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -160,57 +152,45 @@ fun FlexyNotesNavigation(
         },
         modifier = Modifier.systemBarsPadding()
     ) {
-        NavHost(
-            navController = navController,
-            startDestination = "notes_list"
-        ) {
+        NavHost(navController = navController, startDestination = "notes_list") {
             composable("notes_list") {
                 val viewModel: NotesViewModel = hiltViewModel()
                 NotesListScreen(
                     viewModel = viewModel,
                     isGridView = isGridView,
                     onGridViewToggle = { isGridView = !isGridView },
-                    onNavigateToEditor = { noteId ->
-                        navController.navigate("note_editor/${noteId ?: -1L}")
-                    },
+                    onNavigateToEditor = { noteId -> navController.navigate("note_editor/${noteId ?: -1L}") },
                     onOpenDrawer = { scope.launch { drawerState.open() } }
                 )
             }
-
             composable("archive") {
                 val viewModel: NotesViewModel = hiltViewModel()
                 ArchiveScreen(
                     viewModel = viewModel,
-                    isGridView = isGridView, // State weitergeben
+                    isGridView = isGridView,
                     onOpenDrawer = { scope.launch { drawerState.open() } },
-                    onNavigateToEditor = { noteId ->
-                        navController.navigate("note_editor/${noteId}")
-                    }
+                    onNavigateToEditor = { noteId -> navController.navigate("note_editor/${noteId}") }
                 )
             }
-
             composable("trash") {
                 val viewModel: NotesViewModel = hiltViewModel()
                 TrashScreen(
                     viewModel = viewModel,
-                    isGridView = isGridView, // State weitergeben
+                    isGridView = isGridView,
                     onOpenDrawer = { scope.launch { drawerState.open() } }
                 )
             }
-
             composable("settings") {
                 SettingsScreen(
-                    isOledMode = isOledMode,
-                    onOledModeChange = onOledModeChange,
+                    preferences = preferences,
+                    onUpdatePreferences = onUpdatePreferences,
                     onOpenDrawer = { scope.launch { drawerState.open() } }
                 )
             }
-
             composable("note_editor/{noteId}") { backStackEntry ->
                 val viewModel: NotesViewModel = hiltViewModel()
                 val noteIdStr = backStackEntry.arguments?.getString("noteId")
                 val noteId = noteIdStr?.toLongOrNull()?.takeIf { it != -1L }
-
                 NoteEditorScreen(
                     viewModel = viewModel,
                     noteId = noteId,
