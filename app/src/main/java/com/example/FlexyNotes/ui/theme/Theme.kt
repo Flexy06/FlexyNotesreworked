@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import com.example.FlexyNotes.data.ThemeMode
 
 private val DarkColorScheme = darkColorScheme(
     primary = PrimaryDark,
@@ -34,11 +35,18 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun FlexyNotesreworkedTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    themeMode: ThemeMode = ThemeMode.SYSTEM,
     dynamicColor: Boolean = true,
     isOledMode: Boolean = false,
     content: @Composable () -> Unit
 ) {
+    // Determine the actual dark mode state based on user preference
+    val darkTheme = when (themeMode) {
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
+
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current

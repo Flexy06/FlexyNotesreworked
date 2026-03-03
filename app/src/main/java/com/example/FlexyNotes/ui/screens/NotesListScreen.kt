@@ -212,16 +212,30 @@ fun NotesListScreen(
                                 )
                             ) {
                                 Column(modifier = Modifier.padding(16.dp)) {
-                                    Text(
-                                        text = note.title.ifEmpty { "Untitled" },
-                                        style = MaterialTheme.typography.titleMedium
-                                    )
+                                    if (note.title.isNotBlank()) {
+                                        Text(
+                                            text = note.title,
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+                                    }
+
                                     if (note.content.isNotBlank()) {
-                                        Spacer(modifier = Modifier.height(4.dp))
+                                        if (note.title.isNotBlank()) {
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                        }
                                         Text(
                                             text = note.content,
                                             style = MaterialTheme.typography.bodyMedium,
                                             maxLines = 5
+                                        )
+                                    }
+
+                                    // Fallback for completely empty notes
+                                    if (note.title.isBlank() && note.content.isBlank()) {
+                                        Text(
+                                            text = "Empty note",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }
