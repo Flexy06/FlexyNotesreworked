@@ -48,6 +48,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.FlexyNotes.viewmodel.NotesViewModel
@@ -57,12 +59,15 @@ import com.example.FlexyNotes.viewmodel.NotesViewModel
 fun NotesListScreen(
     viewModel: NotesViewModel,
     isGridView: Boolean,
+    showTimestamp: Boolean,
+    useHaptics: Boolean,
     onGridViewToggle: () -> Unit,
     onNavigateToEditor: (Long?) -> Unit,
     onOpenDrawer: () -> Unit
 ) {
     val notes by viewModel.activeNotes.collectAsState()
     var selectedNoteIds by remember { mutableStateOf(setOf<Long>()) }
+    val haptic = LocalHapticFeedback.current
 
     if (selectedNoteIds.isNotEmpty()) {
         BackHandler {
@@ -149,6 +154,9 @@ fun NotesListScreen(
                     val dismissState = rememberSwipeToDismissBoxState(
                         confirmValueChange = { dismissValue ->
                             if (dismissValue != SwipeToDismissBoxValue.Settled) {
+                                if (useHaptics) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                }
                                 viewModel.archiveNote(note)
                                 true
                             } else {
@@ -159,7 +167,7 @@ fun NotesListScreen(
 
                     SwipeToDismissBox(
                         state = dismissState,
-                        // BUGFIX: Hebt die Karte in den Vordergrund, wenn sie gewischt wird!
+                        // Elevates the card to the foreground when swiped
                         modifier = Modifier.zIndex(if (dismissState.targetValue != SwipeToDismissBoxValue.Settled) 1f else 0f),
                         backgroundContent = {
                             val color by animateColorAsState(
@@ -235,6 +243,17 @@ fun NotesListScreen(
                                         Text(
                                             text = "Empty note",
                                             style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+
+                                    if (showTimestamp) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        val dateFormat = java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault())
+                                        val dateString = dateFormat.format(java.util.Date(note.modifiedAt))
+                                        Text(
+                                            text = dateString,
+                                            style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }

@@ -161,6 +161,8 @@ fun FlexyNotesNavigation(
                 NotesListScreen(
                     viewModel = viewModel,
                     isGridView = isGridView,
+                    showTimestamp = preferences.showTimestamp,
+                    useHaptics = preferences.useHaptics,
                     onGridViewToggle = { isGridView = !isGridView },
                     onNavigateToEditor = { noteId -> navController.navigate("note_editor/${noteId ?: -1L}") },
                     onOpenDrawer = { scope.launch { drawerState.open() } }
@@ -199,6 +201,7 @@ fun FlexyNotesNavigation(
                     viewModel = viewModel,
                     noteId = noteId,
                     showTimestamp = preferences.showTimestamp,
+                    useHaptics = preferences.useHaptics,
                     onNavigateBack = { navController.popBackStack() }
                 )
             }

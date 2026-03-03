@@ -39,6 +39,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.example.FlexyNotes.data.NoteEntity
 import com.example.FlexyNotes.viewmodel.NotesViewModel
@@ -53,9 +55,9 @@ fun NoteEditorScreen(
     viewModel: NotesViewModel,
     noteId: Long?,
     showTimestamp: Boolean,
+    useHaptics: Boolean,
     onNavigateBack: () -> Unit
 ) {
-    // Utilize TextFieldState for robust typing and scrolling
     val titleState = rememberTextFieldState()
     val contentState = rememberTextFieldState()
 
@@ -64,6 +66,8 @@ fun NoteEditorScreen(
     val contentFocusRequester = remember { FocusRequester() }
     val interactionSource = remember { MutableInteractionSource() }
     val scrollState = rememberScrollState()
+
+    val haptic = LocalHapticFeedback.current
 
     LaunchedEffect(noteId) {
         if (noteId == null) {
@@ -86,6 +90,7 @@ fun NoteEditorScreen(
                 actions = {
                     if (existingNote != null) {
                         IconButton(onClick = {
+                            if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             viewModel.archiveNote(existingNote!!)
                             onNavigateBack()
                         }) {
@@ -93,6 +98,7 @@ fun NoteEditorScreen(
                         }
 
                         IconButton(onClick = {
+                            if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             viewModel.moveToTrash(existingNote!!)
                             onNavigateBack()
                         }) {
@@ -102,6 +108,8 @@ fun NoteEditorScreen(
 
                     Button(
                         onClick = {
+                            if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+
                             val titleText = titleState.text.toString()
                             val contentText = contentState.text.toString()
 
@@ -121,7 +129,6 @@ fun NoteEditorScreen(
                 }
             )
         },
-        // Hand over keyboard management to Scaffold
         contentWindowInsets = WindowInsets.safeDrawing
     ) { paddingValues ->
 
@@ -139,7 +146,6 @@ fun NoteEditorScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
 
-            // Title Input
             BasicTextField(
                 state = titleState,
                 modifier = Modifier.fillMaxWidth(),
@@ -162,7 +168,6 @@ fun NoteEditorScreen(
                 }
             )
 
-            // Dynamic Timestamp Layout based on user preference
             if (showTimestamp && existingNote != null) {
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 12.dp),
@@ -183,7 +188,6 @@ fun NoteEditorScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Content Input
             BasicTextField(
                 state = contentState,
                 modifier = Modifier
