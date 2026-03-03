@@ -27,7 +27,10 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -88,8 +91,15 @@ fun FlexyNotesNavigation(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: "notes_list"
 
+    // Zentraler State für die Grid-Ansicht (wird an alle Screens weitergegeben)
+    var isGridView by rememberSaveable { mutableStateOf(true) }
+
+    // BUGFIX: Drawer deaktivieren, wenn wir uns im Editor befinden
+    val gesturesEnabled = currentRoute?.startsWith("note_editor") == false
+
     ModalNavigationDrawer(
         drawerState = drawerState,
+        gesturesEnabled = gesturesEnabled, // Hier wird die Wischgeste kontrolliert
         drawerContent = {
             ModalDrawerSheet {
                 Spacer(Modifier.height(32.dp))
@@ -158,6 +168,8 @@ fun FlexyNotesNavigation(
                 val viewModel: NotesViewModel = hiltViewModel()
                 NotesListScreen(
                     viewModel = viewModel,
+                    isGridView = isGridView,
+                    onGridViewToggle = { isGridView = !isGridView },
                     onNavigateToEditor = { noteId ->
                         navController.navigate("note_editor/${noteId ?: -1L}")
                     },
@@ -169,6 +181,7 @@ fun FlexyNotesNavigation(
                 val viewModel: NotesViewModel = hiltViewModel()
                 ArchiveScreen(
                     viewModel = viewModel,
+                    isGridView = isGridView, // State weitergeben
                     onOpenDrawer = { scope.launch { drawerState.open() } },
                     onNavigateToEditor = { noteId ->
                         navController.navigate("note_editor/${noteId}")
@@ -180,6 +193,7 @@ fun FlexyNotesNavigation(
                 val viewModel: NotesViewModel = hiltViewModel()
                 TrashScreen(
                     viewModel = viewModel,
+                    isGridView = isGridView, // State weitergeben
                     onOpenDrawer = { scope.launch { drawerState.open() } }
                 )
             }

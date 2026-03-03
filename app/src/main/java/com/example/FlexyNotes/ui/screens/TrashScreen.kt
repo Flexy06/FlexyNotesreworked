@@ -1,8 +1,11 @@
 package com.example.FlexyNotes.ui.screens
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Menu
@@ -16,10 +19,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.FlexyNotes.viewmodel.NotesViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun TrashScreen(
     viewModel: NotesViewModel,
+    isGridView: Boolean,
     onOpenDrawer: () -> Unit
 ) {
     val deletedNotes by viewModel.deletedNotes.collectAsState()
@@ -53,45 +57,55 @@ fun TrashScreen(
                 Text("Trash is empty.")
             }
         } else {
-            LazyColumn(
+            // BUGFIX: Nutzt jetzt ebenfalls das StaggeredGrid
+            LazyVerticalStaggeredGrid(
+                columns = StaggeredGridCells.Fixed(if (isGridView) 2 else 1),
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues),
-                contentPadding = PaddingValues(16.dp)
+                contentPadding = PaddingValues(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalItemSpacing = 8.dp
             ) {
-                items(deletedNotes) { note ->
+                items(deletedNotes, key = { it.id }) { note ->
                     Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 8.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        )
                     ) {
-                        Row(
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .padding(16.dp)
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = note.title.ifEmpty { "Untitled" },
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            if (note.content.isNotBlank()) {
+                                Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = note.title.ifEmpty { "Untitled" },
-                                    style = MaterialTheme.typography.titleMedium
+                                    text = note.content,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    maxLines = 5
                                 )
-                                if (note.content.isNotBlank()) {
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = note.content,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        maxLines = 2
-                                    )
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // Buttons am unteren Rand der Karte für die StaggeredGrid Optik
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End
+                            ) {
+                                IconButton(onClick = { viewModel.restoreNote(note) }) {
+                                    Icon(Icons.Default.Restore, contentDescription = "Restore")
                                 }
-                            }
-                            // Restore button
-                            IconButton(onClick = { viewModel.restoreNote(note) }) {
-                                Icon(Icons.Default.Restore, contentDescription = "Restore")
-                            }
-                            // Delete permanently button
-                            IconButton(onClick = { viewModel.deletePermanently(note) }) {
-                                Icon(Icons.Default.DeleteForever, contentDescription = "Delete permanently")
+                                IconButton(onClick = { viewModel.deletePermanently(note) }) {
+                                    Icon(Icons.Default.DeleteForever, contentDescription = "Delete permanently")
+                                }
                             }
                         }
                     }

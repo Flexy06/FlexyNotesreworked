@@ -44,26 +44,25 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.example.FlexyNotes.viewmodel.NotesViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun NotesListScreen(
     viewModel: NotesViewModel,
+    isGridView: Boolean,
+    onGridViewToggle: () -> Unit,
     onNavigateToEditor: (Long?) -> Unit,
     onOpenDrawer: () -> Unit
 ) {
     val notes by viewModel.activeNotes.collectAsState()
     var selectedNoteIds by remember { mutableStateOf(setOf<Long>()) }
-
-    // Remembers the view state even when rotating the screen
-    var isGridView by rememberSaveable { mutableStateOf(true) }
 
     if (selectedNoteIds.isNotEmpty()) {
         BackHandler {
@@ -107,8 +106,7 @@ fun NotesListScreen(
                         }
                     },
                     actions = {
-                        // Toggle button for grid/list view
-                        IconButton(onClick = { isGridView = !isGridView }) {
+                        IconButton(onClick = onGridViewToggle) {
                             Icon(
                                 imageVector = if (isGridView) Icons.Default.ViewAgenda else Icons.Default.GridView,
                                 contentDescription = "Toggle view"
@@ -136,14 +134,12 @@ fun NotesListScreen(
                 Text("No active notes. Create your first one Amyyyyyyyy!")
             }
         } else {
-            // Replaced LazyColumn with LazyVerticalStaggeredGrid
             LazyVerticalStaggeredGrid(
                 columns = StaggeredGridCells.Fixed(if (isGridView) 2 else 1),
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues),
                 contentPadding = PaddingValues(16.dp),
-                // Handles spacing between items natively
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalItemSpacing = 8.dp
             ) {
@@ -163,6 +159,8 @@ fun NotesListScreen(
 
                     SwipeToDismissBox(
                         state = dismissState,
+                        // BUGFIX: Hebt die Karte in den Vordergrund, wenn sie gewischt wird!
+                        modifier = Modifier.zIndex(if (dismissState.targetValue != SwipeToDismissBoxValue.Settled) 1f else 0f),
                         backgroundContent = {
                             val color by animateColorAsState(
                                 targetValue = if (dismissState.targetValue != SwipeToDismissBoxValue.Settled) {
@@ -175,7 +173,6 @@ fun NotesListScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    // Removed hardcoded bottom padding since the Grid handles it
                                     .background(color, MaterialTheme.shapes.medium)
                                     .padding(horizontal = 20.dp),
                                 contentAlignment = Alignment.CenterStart
@@ -191,7 +188,6 @@ fun NotesListScreen(
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    // Removed hardcoded bottom padding since the Grid handles it
                                     .combinedClickable(
                                         onClick = {
                                             if (selectedNoteIds.isNotEmpty()) {
@@ -225,7 +221,7 @@ fun NotesListScreen(
                                         Text(
                                             text = note.content,
                                             style = MaterialTheme.typography.bodyMedium,
-                                            maxLines = 5 // Limit lines in grid view to keep it compact
+                                            maxLines = 5
                                         )
                                     }
                                 }
