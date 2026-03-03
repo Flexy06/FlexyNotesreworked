@@ -1,6 +1,7 @@
 package com.example.FlexyNotes
 
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -25,6 +26,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,6 +61,14 @@ class MainActivity : ComponentActivity() {
         setContent {
             val mainViewModel: MainViewModel = hiltViewModel()
             val preferences by mainViewModel.preferences.collectAsState()
+
+            LaunchedEffect(preferences.isSecureMode) {
+                if (preferences.isSecureMode) {
+                    window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+                } else {
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                }
+            }
 
             FlexyNotesreworkedTheme(
                 themeMode = preferences.themeMode,
@@ -161,7 +171,6 @@ fun FlexyNotesNavigation(
                 NotesListScreen(
                     viewModel = viewModel,
                     isGridView = isGridView,
-                    showTimestamp = preferences.showTimestamp,
                     useHaptics = preferences.useHaptics,
                     onGridViewToggle = { isGridView = !isGridView },
                     onNavigateToEditor = { noteId -> navController.navigate("note_editor/${noteId ?: -1L}") },

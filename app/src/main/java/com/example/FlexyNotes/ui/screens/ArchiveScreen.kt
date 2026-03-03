@@ -51,7 +51,6 @@ fun ArchiveScreen(
                 Text("Your archive is empty.")
             }
         } else {
-            // BUGFIX: Nutzt jetzt ebenfalls das StaggeredGrid
             LazyVerticalStaggeredGrid(
                 columns = StaggeredGridCells.Fixed(if (isGridView) 2 else 1),
                 modifier = Modifier
@@ -84,25 +83,39 @@ fun ArchiveScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.Top
                             ) {
-                                Text(
-                                    text = note.title.ifEmpty { "Untitled" },
-                                    style = MaterialTheme.typography.titleMedium,
-                                    modifier = Modifier.weight(1f)
-                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    if (note.title.isNotBlank()) {
+                                        Text(
+                                            text = note.title,
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+                                    }
+
+                                    if (note.content.isNotBlank()) {
+                                        if (note.title.isNotBlank()) {
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                        }
+                                        Text(
+                                            text = note.content,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            maxLines = 5
+                                        )
+                                    }
+
+                                    if (note.title.isBlank() && note.content.isBlank()) {
+                                        Text(
+                                            text = "Empty note",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
                                 IconButton(
                                     onClick = { viewModel.unarchiveNote(note) },
                                     modifier = Modifier.size(24.dp).padding(start = 4.dp)
                                 ) {
                                     Icon(Icons.Default.Unarchive, contentDescription = "Unarchive")
                                 }
-                            }
-                            if (note.content.isNotBlank()) {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = note.content,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    maxLines = 5
-                                )
                             }
                         }
                     }

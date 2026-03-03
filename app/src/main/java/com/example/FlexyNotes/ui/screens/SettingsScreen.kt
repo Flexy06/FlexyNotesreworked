@@ -138,10 +138,22 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // New Privacy Group
+            SettingsGroup(title = "Privacy") {
+                SwitchPreference(
+                    title = "Secure Mode",
+                    subtitle = "Prevents screenshots and hides app in recents",
+                    checked = preferences.isSecureMode,
+                    onCheckedChange = { newVal -> onUpdatePreferences { it.copy(isSecureMode = newVal) } }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
             SettingsGroup(title = "About") {
                 ListItem(
                     headlineContent = { Text("Version") },
-                    supportingContent = { Text("v0.5.1") },
+                    supportingContent = { Text("v0.5.5") }, // Incremented for latest version
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                 )
             }
@@ -151,7 +163,6 @@ fun SettingsScreen(
     }
 }
 
-// Groups preferences in a rounded Material 3 surface
 @Composable
 private fun SettingsGroup(
     title: String,
@@ -176,7 +187,6 @@ private fun SettingsGroup(
     }
 }
 
-// Standard Material 3 switch list item
 @Composable
 private fun SwitchPreference(
     title: String,
@@ -195,7 +205,6 @@ private fun SwitchPreference(
     )
 }
 
-// Opens an AlertDialog for single-choice selections
 @Composable
 private fun <T> ListPreference(
     title: String,

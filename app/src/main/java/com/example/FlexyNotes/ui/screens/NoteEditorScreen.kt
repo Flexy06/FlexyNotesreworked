@@ -1,5 +1,6 @@
 package com.example.FlexyNotes.ui.screens
 
+import android.content.Intent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -20,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -40,6 +42,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.example.FlexyNotes.data.NoteEntity
@@ -68,6 +71,7 @@ fun NoteEditorScreen(
     val scrollState = rememberScrollState()
 
     val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
 
     LaunchedEffect(noteId) {
         if (noteId == null) {
@@ -89,6 +93,26 @@ fun NoteEditorScreen(
                 title = { },
                 actions = {
                     if (existingNote != null) {
+                        // Share Action
+                        IconButton(onClick = {
+                            if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+
+                            val sendIntent = Intent().apply {
+                                action = Intent.ACTION_SEND
+                                val shareText = buildString {
+                                    if (existingNote!!.title.isNotBlank()) appendLine(existingNote!!.title)
+                                    if (existingNote!!.title.isNotBlank() && existingNote!!.content.isNotBlank()) appendLine()
+                                    if (existingNote!!.content.isNotBlank()) append(existingNote!!.content)
+                                }
+                                putExtra(Intent.EXTRA_TEXT, shareText)
+                                type = "text/plain"
+                            }
+                            val shareIntent = Intent.createChooser(sendIntent, "Share note via...")
+                            context.startActivity(shareIntent)
+                        }) {
+                            Icon(Icons.Default.Share, contentDescription = "Share note")
+                        }
+
                         IconButton(onClick = {
                             if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             viewModel.archiveNote(existingNote!!)

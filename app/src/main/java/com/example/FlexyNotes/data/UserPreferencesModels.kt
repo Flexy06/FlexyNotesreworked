@@ -9,5 +9,6 @@ data class UserPreferences(
     val useDynamicColor: Boolean = true,
     val sortOrder: SortOrder = SortOrder.DATE_EDITED,
     val showTimestamp: Boolean = false,
-    val useHaptics: Boolean = true
+    val useHaptics: Boolean = true,
+    val isSecureMode: Boolean = false // New setting for privacy
 )

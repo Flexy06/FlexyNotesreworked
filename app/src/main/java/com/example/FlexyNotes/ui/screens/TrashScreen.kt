@@ -57,7 +57,6 @@ fun TrashScreen(
                 Text("Trash is empty.")
             }
         } else {
-            // BUGFIX: Nutzt jetzt ebenfalls das StaggeredGrid
             LazyVerticalStaggeredGrid(
                 columns = StaggeredGridCells.Fixed(if (isGridView) 2 else 1),
                 modifier = Modifier
@@ -80,12 +79,17 @@ fun TrashScreen(
                                 .fillMaxWidth()
                                 .padding(16.dp)
                         ) {
-                            Text(
-                                text = note.title.ifEmpty { "Untitled" },
-                                style = MaterialTheme.typography.titleMedium
-                            )
+                            if (note.title.isNotBlank()) {
+                                Text(
+                                    text = note.title,
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                            }
+
                             if (note.content.isNotBlank()) {
-                                Spacer(modifier = Modifier.height(4.dp))
+                                if (note.title.isNotBlank()) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                }
                                 Text(
                                     text = note.content,
                                     style = MaterialTheme.typography.bodyMedium,
@@ -93,9 +97,16 @@ fun TrashScreen(
                                 )
                             }
 
+                            if (note.title.isBlank() && note.content.isBlank()) {
+                                Text(
+                                    text = "Empty note",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            // Buttons am unteren Rand der Karte für die StaggeredGrid Optik
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.End

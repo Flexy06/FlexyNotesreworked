@@ -26,6 +26,7 @@ class UserPreferencesRepository @Inject constructor(
         val SORT_ORDER = stringPreferencesKey("sort_order")
         val SHOW_TIMESTAMP = booleanPreferencesKey("show_timestamp")
         val USE_HAPTICS = booleanPreferencesKey("use_haptics")
+        val IS_SECURE_MODE = booleanPreferencesKey("is_secure_mode")
     }
 
     val userPreferencesFlow: Flow<UserPreferences> = context.dataStore.data
@@ -36,30 +37,31 @@ class UserPreferencesRepository @Inject constructor(
                 useDynamicColor = preferences[USE_DYNAMIC_COLOR] ?: true,
                 sortOrder = SortOrder.valueOf(preferences[SORT_ORDER] ?: SortOrder.DATE_EDITED.name),
                 showTimestamp = preferences[SHOW_TIMESTAMP] ?: false,
-                useHaptics = preferences[USE_HAPTICS] ?: true
+                useHaptics = preferences[USE_HAPTICS] ?: true,
+                isSecureMode = preferences[IS_SECURE_MODE] ?: false
             )
         }
 
     suspend fun updatePreferences(update: (UserPreferences) -> UserPreferences) {
         context.dataStore.edit { preferences ->
-            // Wir lesen den aktuellen Stand (falls vorhanden) oder nehmen Defaults
             val current = UserPreferences(
                 isOledMode = preferences[IS_OLED_MODE] ?: true,
                 themeMode = ThemeMode.valueOf(preferences[THEME_MODE] ?: ThemeMode.SYSTEM.name),
                 useDynamicColor = preferences[USE_DYNAMIC_COLOR] ?: true,
                 sortOrder = SortOrder.valueOf(preferences[SORT_ORDER] ?: SortOrder.DATE_EDITED.name),
                 showTimestamp = preferences[SHOW_TIMESTAMP] ?: false,
-                useHaptics = preferences[USE_HAPTICS] ?: true
+                useHaptics = preferences[USE_HAPTICS] ?: true,
+                isSecureMode = preferences[IS_SECURE_MODE] ?: false
             )
             val updated = update(current)
 
-            // Speichern der neuen Werte
             preferences[IS_OLED_MODE] = updated.isOledMode
             preferences[THEME_MODE] = updated.themeMode.name
             preferences[USE_DYNAMIC_COLOR] = updated.useDynamicColor
             preferences[SORT_ORDER] = updated.sortOrder.name
             preferences[SHOW_TIMESTAMP] = updated.showTimestamp
             preferences[USE_HAPTICS] = updated.useHaptics
+            preferences[IS_SECURE_MODE] = updated.isSecureMode
         }
     }
 }

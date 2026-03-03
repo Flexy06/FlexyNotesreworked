@@ -59,7 +59,6 @@ import com.example.FlexyNotes.viewmodel.NotesViewModel
 fun NotesListScreen(
     viewModel: NotesViewModel,
     isGridView: Boolean,
-    showTimestamp: Boolean,
     useHaptics: Boolean,
     onGridViewToggle: () -> Unit,
     onNavigateToEditor: (Long?) -> Unit,
@@ -136,7 +135,7 @@ fun NotesListScreen(
                     .padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
-                Text("No active notes. Create your first one Amyyyyyyyy!")
+                Text("No active notes. Create your first one!")
             }
         } else {
             LazyVerticalStaggeredGrid(
@@ -167,7 +166,6 @@ fun NotesListScreen(
 
                     SwipeToDismissBox(
                         state = dismissState,
-                        // Elevates the card to the foreground when swiped
                         modifier = Modifier.zIndex(if (dismissState.targetValue != SwipeToDismissBoxValue.Settled) 1f else 0f),
                         backgroundContent = {
                             val color by animateColorAsState(
@@ -206,6 +204,9 @@ fun NotesListScreen(
                                         },
                                         onLongClick = {
                                             if (!isSelected) {
+                                                if (useHaptics) {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                }
                                                 selectedNoteIds = selectedNoteIds + note.id
                                             }
                                         }
@@ -238,22 +239,10 @@ fun NotesListScreen(
                                         )
                                     }
 
-                                    // Fallback for completely empty notes
                                     if (note.title.isBlank() && note.content.isBlank()) {
                                         Text(
                                             text = "Empty note",
                                             style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-
-                                    if (showTimestamp) {
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        val dateFormat = java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault())
-                                        val dateString = dateFormat.format(java.util.Date(note.modifiedAt))
-                                        Text(
-                                            text = dateString,
-                                            style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
