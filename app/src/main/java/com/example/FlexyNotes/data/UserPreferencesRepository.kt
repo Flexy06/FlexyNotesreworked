@@ -42,7 +42,7 @@ class UserPreferencesRepository @Inject constructor(
 
     suspend fun updatePreferences(update: (UserPreferences) -> UserPreferences) {
         context.dataStore.edit { preferences ->
-
+            // Wir lesen den aktuellen Stand (falls vorhanden) oder nehmen Defaults
             val current = UserPreferences(
                 isOledMode = preferences[IS_OLED_MODE] ?: true,
                 themeMode = ThemeMode.valueOf(preferences[THEME_MODE] ?: ThemeMode.SYSTEM.name),
@@ -53,7 +53,7 @@ class UserPreferencesRepository @Inject constructor(
             )
             val updated = update(current)
 
-
+            // Speichern der neuen Werte
             preferences[IS_OLED_MODE] = updated.isOledMode
             preferences[THEME_MODE] = updated.themeMode.name
             preferences[USE_DYNAMIC_COLOR] = updated.useDynamicColor

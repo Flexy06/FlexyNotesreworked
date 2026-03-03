@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -42,14 +43,19 @@ import androidx.compose.ui.unit.dp
 import com.example.FlexyNotes.data.NoteEntity
 import com.example.FlexyNotes.viewmodel.NotesViewModel
 import kotlinx.coroutines.delay
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoteEditorScreen(
     viewModel: NotesViewModel,
     noteId: Long?,
+    showTimestamp: Boolean,
     onNavigateBack: () -> Unit
 ) {
+    // Utilize TextFieldState for robust typing and scrolling
     val titleState = rememberTextFieldState()
     val contentState = rememberTextFieldState()
 
@@ -110,12 +116,12 @@ fun NoteEditorScreen(
                         },
                         modifier = Modifier.padding(end = 8.dp)
                     ) {
-                        Text("Speichern")
+                        Text("Save")
                     }
                 }
             )
         },
-        // Nutzt wieder die Standard Insets, was die beste Kompatibilität für ScrollViews bietet
+        // Hand over keyboard management to Scaffold
         contentWindowInsets = WindowInsets.safeDrawing
     ) { paddingValues ->
 
@@ -123,8 +129,6 @@ fun NoteEditorScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                // HIER IST DIE MAGIE: Die Column scrollt. Wenn die Tastatur aufklappt,
-                // schrumpft die Column und schiebt den fokussierten Cursor automatisch ins Bild!
                 .verticalScroll(scrollState)
                 .clickable(
                     interactionSource = interactionSource,
@@ -135,11 +139,10 @@ fun NoteEditorScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
 
+            // Title Input
             BasicTextField(
                 state = titleState,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
+                modifier = Modifier.fillMaxWidth(),
                 textStyle = MaterialTheme.typography.headlineMedium.copy(
                     color = MaterialTheme.colorScheme.onSurface
                 ),
@@ -149,7 +152,7 @@ fun NoteEditorScreen(
                     Box {
                         if (titleState.text.isEmpty()) {
                             Text(
-                                "Titel",
+                                "Title",
                                 style = MaterialTheme.typography.headlineMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                             )
@@ -159,11 +162,32 @@ fun NoteEditorScreen(
                 }
             )
 
+            // Dynamic Timestamp Layout based on user preference
+            if (showTimestamp && existingNote != null) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+
+                val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()) }
+                val createdStr = remember(existingNote?.createdAt) { existingNote?.createdAt?.let { dateFormat.format(Date(it)) } ?: "" }
+                val editedStr = remember(existingNote?.modifiedAt) { existingNote?.modifiedAt?.let { dateFormat.format(Date(it)) } ?: "" }
+
+                Text(
+                    text = "Created: $createdStr   Edited: $editedStr",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+            } else {
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // Content Input
             BasicTextField(
                 state = contentState,
                 modifier = Modifier
                     .fillMaxWidth()
-                    // Das Textfeld wächst unendlich mit, hat aber eine Mindesthöhe für Klicks
                     .defaultMinSize(minHeight = 400.dp)
                     .focusRequester(contentFocusRequester),
                 textStyle = MaterialTheme.typography.bodyLarge.copy(
@@ -174,7 +198,7 @@ fun NoteEditorScreen(
                     Box(modifier = Modifier.fillMaxSize()) {
                         if (contentState.text.isEmpty()) {
                             Text(
-                                "Notiz",
+                                "Note",
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                             )
@@ -184,7 +208,6 @@ fun NoteEditorScreen(
                 }
             )
 
-            // Gibt uns etwas Platz unten, damit der letzte Text nicht direkt auf der Tastatur klebt
             Spacer(modifier = Modifier.height(100.dp))
         }
     }

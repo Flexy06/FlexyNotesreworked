@@ -60,8 +60,11 @@ class MainActivity : ComponentActivity() {
             val mainViewModel: MainViewModel = hiltViewModel()
             val preferences by mainViewModel.preferences.collectAsState()
 
-            // Hinweis: Später passen wir das Theme hier an, um Light/Dark/Dynamic zu unterstützen
-            FlexyNotesreworkedTheme(isOledMode = preferences.isOledMode) {
+            FlexyNotesreworkedTheme(
+                themeMode = preferences.themeMode,
+                dynamicColor = preferences.useDynamicColor,
+                isOledMode = preferences.isOledMode
+            ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -106,7 +109,7 @@ fun FlexyNotesNavigation(
 
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Edit, contentDescription = null) },
-                    label = { Text("Notizen") },
+                    label = { Text("Notes") },
                     selected = currentRoute == "notes_list",
                     onClick = {
                         navController.navigate("notes_list") { popUpTo("notes_list") { inclusive = true } }
@@ -116,7 +119,7 @@ fun FlexyNotesNavigation(
                 )
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Archive, contentDescription = null) },
-                    label = { Text("Archiv") },
+                    label = { Text("Archive") },
                     selected = currentRoute == "archive",
                     onClick = {
                         navController.navigate("archive")
@@ -126,7 +129,7 @@ fun FlexyNotesNavigation(
                 )
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Delete, contentDescription = null) },
-                    label = { Text("Papierkorb") },
+                    label = { Text("Trash") },
                     selected = currentRoute == "trash",
                     onClick = {
                         navController.navigate("trash")
@@ -139,7 +142,7 @@ fun FlexyNotesNavigation(
 
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                    label = { Text("Einstellungen") },
+                    label = { Text("Settings") },
                     selected = currentRoute == "settings",
                     onClick = {
                         navController.navigate("settings")
@@ -191,9 +194,11 @@ fun FlexyNotesNavigation(
                 val viewModel: NotesViewModel = hiltViewModel()
                 val noteIdStr = backStackEntry.arguments?.getString("noteId")
                 val noteId = noteIdStr?.toLongOrNull()?.takeIf { it != -1L }
+
                 NoteEditorScreen(
                     viewModel = viewModel,
                     noteId = noteId,
+                    showTimestamp = preferences.showTimestamp,
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
