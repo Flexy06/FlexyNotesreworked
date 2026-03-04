@@ -2,7 +2,9 @@ package com.example.FlexyNotes.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -40,15 +42,18 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
@@ -77,7 +82,6 @@ fun NotesListScreen(
         }
     }
 
-    // Dismiss FAB menu on back press
     if (showFabMenu) {
         BackHandler {
             showFabMenu = false
@@ -132,7 +136,6 @@ fun NotesListScreen(
         },
         floatingActionButton = {
             if (selectedNoteIds.isEmpty()) {
-                // Modern Animated Speed Dial FAB
                 Column(horizontalAlignment = Alignment.End) {
                     AnimatedVisibility(
                         visible = showFabMenu,
@@ -243,20 +246,57 @@ fun NotesListScreen(
                         val dismissState = rememberSwipeToDismissBoxState(
                             confirmValueChange = { dismissValue ->
                                 if (dismissValue != SwipeToDismissBoxValue.Settled) {
-                                    if (useHaptics) {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    }
                                     viewModel.archiveNote(note)
                                     true
                                 } else {
                                     false
                                 }
-                            }
+                            },
+                            // 40% threshold for higher drag resistance
+                            positionalThreshold = { totalDistance -> totalDistance * 0.4f }
                         )
+
+                        // Realtime haptic feedback
+                        var previousTarget by remember { mutableStateOf(SwipeToDismissBoxValue.Settled) }
+                        LaunchedEffect(dismissState) {
+                            snapshotFlow { dismissState.targetValue }.collect { currentTarget ->
+                                if (useHaptics) {
+                                    if (previousTarget == SwipeToDismissBoxValue.Settled && currentTarget != SwipeToDismissBoxValue.Settled) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    } else if (previousTarget != SwipeToDismissBoxValue.Settled && currentTarget == SwipeToDismissBoxValue.Settled) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    }
+                                }
+                                previousTarget = currentTarget
+                            }
+                        }
+
+                        // Calculate physical resistance & snapping
+                        val rawOffset = try { dismissState.requireOffset() } catch(e: Exception) { 0f }
+                        val isPastThreshold = dismissState.targetValue != SwipeToDismissBoxValue.Settled
+
+                        // Counteract the swipe by 40% if threshold is not reached -> creates drag resistance
+                        val targetResistance = if (!isPastThreshold && rawOffset != 0f) {
+                            -rawOffset * 0.4f
+                        } else {
+                            0f // Release resistance -> snapping effect
+                        }
+
+                        val animatedResistance by animateFloatAsState(
+                            targetValue = targetResistance,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessLow
+                            ),
+                            label = "resistance"
+                        )
+
+                        val isSwiping = dismissState.dismissDirection != SwipeToDismissBoxValue.Settled ||
+                                dismissState.targetValue != SwipeToDismissBoxValue.Settled
 
                         SwipeToDismissBox(
                             state = dismissState,
-                            modifier = Modifier.zIndex(if (dismissState.targetValue != SwipeToDismissBoxValue.Settled) 1f else 0f),
+                            modifier = Modifier.zIndex(if (isSwiping) 1f else 0f),
                             backgroundContent = {
                                 val color by animateColorAsState(
                                     targetValue = if (dismissState.targetValue != SwipeToDismissBoxValue.Settled) {
@@ -266,12 +306,21 @@ fun NotesListScreen(
                                     }, label = "swipeColor"
                                 )
 
+                                val alignment = when (dismissState.dismissDirection) {
+                                    SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+                                    SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
+                                    else -> Alignment.CenterStart
+                                }
+
+                                val paddingStart = if (alignment == Alignment.CenterStart) 20.dp else 0.dp
+                                val paddingEnd = if (alignment == Alignment.CenterEnd) 20.dp else 0.dp
+
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .background(color, MaterialTheme.shapes.medium)
-                                        .padding(horizontal = 20.dp),
-                                    contentAlignment = Alignment.CenterStart
+                                        .padding(start = paddingStart, end = paddingEnd),
+                                    contentAlignment = alignment
                                 ) {
                                     Icon(
                                         Icons.Default.Archive,
@@ -284,6 +333,8 @@ fun NotesListScreen(
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        // Apply the visual resistance offset here
+                                        .graphicsLayer { translationX = animatedResistance }
                                         .combinedClickable(
                                             onClick = {
                                                 if (selectedNoteIds.isNotEmpty()) {
@@ -311,29 +362,23 @@ fun NotesListScreen(
                                     )
                                 ) {
                                     Column(modifier = Modifier.padding(16.dp)) {
-                                        if (note.title.isNotBlank()) {
-                                            Text(
-                                                text = note.title,
-                                                style = MaterialTheme.typography.titleMedium
-                                            )
-                                        }
-
+                                        Text(
+                                            text = note.title.ifEmpty { "Untitled" },
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
                                         if (note.content.isNotBlank()) {
-                                            if (note.title.isNotBlank()) {
-                                                Spacer(modifier = Modifier.height(4.dp))
+                                            Spacer(modifier = Modifier.height(4.dp))
+
+                                            val displayContent = if (note.isChecklist) {
+                                                note.content.replace("[ ] ", "☐ ").replace("[x] ", "☑ ")
+                                            } else {
+                                                note.content
                                             }
+
                                             Text(
-                                                text = note.content,
+                                                text = displayContent,
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 maxLines = 5
-                                            )
-                                        }
-
-                                        if (note.title.isBlank() && note.content.isBlank()) {
-                                            Text(
-                                                text = "Empty note",
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                     }
@@ -344,7 +389,6 @@ fun NotesListScreen(
                 }
             }
 
-            // Scrim to dismiss FAB menu when clicking outside
             AnimatedVisibility(
                 visible = showFabMenu,
                 enter = fadeIn(),

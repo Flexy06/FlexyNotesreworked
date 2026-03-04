@@ -62,7 +62,6 @@ import java.util.Date
 import java.util.Locale
 import java.util.UUID
 
-// State class for individual checklist items to ensure proper UI updates
 class ChecklistItemState(
     initialText: String,
     initialChecked: Boolean
@@ -87,7 +86,6 @@ fun NoteEditorScreen(
 
     val checklistItems = remember { mutableStateListOf<ChecklistItemState>() }
 
-    // Manage dynamic focus for new checklist items created via 'Enter'
     val checklistFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
     var itemToFocus by remember { mutableStateOf<String?>(null) }
 
@@ -102,7 +100,6 @@ fun NoteEditorScreen(
 
     val actualIsChecklist = existingNote?.isChecklist ?: isChecklist
 
-    // Handles focusing newly created checklist items automatically
     LaunchedEffect(itemToFocus) {
         itemToFocus?.let { id ->
             delay(50)
@@ -167,7 +164,15 @@ fun NoteEditorScreen(
                                 val shareText = buildString {
                                     if (existingNote!!.title.isNotBlank()) appendLine(existingNote!!.title)
                                     if (existingNote!!.title.isNotBlank() && existingNote!!.content.isNotBlank()) appendLine()
-                                    if (existingNote!!.content.isNotBlank()) append(existingNote!!.content)
+
+                                    // Replace brackets with nice symbols for sharing
+                                    val formattedContent = if (existingNote!!.isChecklist) {
+                                        existingNote!!.content.replace("[ ] ", "☐ ").replace("[x] ", "☑ ")
+                                    } else {
+                                        existingNote!!.content
+                                    }
+
+                                    if (formattedContent.isNotBlank()) append(formattedContent)
                                 }
                                 putExtra(Intent.EXTRA_TEXT, shareText)
                                 type = "text/plain"
@@ -309,7 +314,6 @@ fun NoteEditorScreen(
                             BasicTextField(
                                 value = item.text,
                                 onValueChange = { newValue ->
-                                    // Detect Enter Key (newline character) to spawn a new item
                                     if (newValue.contains('\n')) {
                                         val parts = newValue.split('\n', limit = 2)
                                         item.text = parts[0]
