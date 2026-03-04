@@ -101,7 +101,7 @@ fun SettingsScreen(
             SettingsGroup(title = "About") {
                 ListItem(
                     headlineContent = { Text("Version") },
-                    supportingContent = { Text("v0.9.2") },
+                    supportingContent = { Text("v0.9.3") },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                 )
             }

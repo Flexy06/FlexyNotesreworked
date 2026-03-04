@@ -19,12 +19,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -38,6 +40,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
@@ -51,6 +55,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -73,18 +79,41 @@ fun NotesListScreen(
     var selectedNoteIds by remember { mutableStateOf(setOf<Long>()) }
     var showFabMenu by remember { mutableStateOf(false) }
 
+    // Search state
+    var isSearching by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    val searchFocusRequester = remember { FocusRequester() }
+
     val haptic = LocalHapticFeedback.current
 
-    if (selectedNoteIds.isNotEmpty()) {
-        BackHandler {
-            selectedNoteIds = emptySet()
+    val displayedNotes = remember(notes, searchQuery) {
+        if (searchQuery.isBlank()) {
+            notes
+        } else {
+            notes.filter {
+                it.title.contains(searchQuery, ignoreCase = true) ||
+                        it.content.contains(searchQuery, ignoreCase = true)
+            }
         }
     }
 
-    if (showFabMenu) {
-        BackHandler {
-            showFabMenu = false
+    LaunchedEffect(isSearching) {
+        if (isSearching) {
+            try {
+                searchFocusRequester.requestFocus()
+            } catch (_: Exception) {}
         }
+    }
+
+    if (selectedNoteIds.isNotEmpty()) {
+        BackHandler { selectedNoteIds = emptySet() }
+    } else if (isSearching) {
+        BackHandler {
+            isSearching = false
+            searchQuery = ""
+        }
+    } else if (showFabMenu) {
+        BackHandler { showFabMenu = false }
     }
 
     Scaffold(
@@ -114,6 +143,41 @@ fun NotesListScreen(
                         }
                     }
                 )
+            } else if (isSearching) {
+                TopAppBar(
+                    title = {
+                        TextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            placeholder = { Text("Search notes...") },
+                            singleLine = true,
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(searchFocusRequester)
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = {
+                            isSearching = false
+                            searchQuery = ""
+                        }) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Close search")
+                        }
+                    },
+                    actions = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear text")
+                            }
+                        }
+                    }
+                )
             } else {
                 TopAppBar(
                     title = { Text("Notes") },
@@ -123,6 +187,9 @@ fun NotesListScreen(
                         }
                     },
                     actions = {
+                        IconButton(onClick = { isSearching = true }) {
+                            Icon(Icons.Default.Search, contentDescription = "Search notes")
+                        }
                         IconButton(onClick = onGridViewToggle) {
                             Icon(
                                 imageVector = if (isGridView) Icons.Default.ViewAgenda else Icons.Default.GridView,
@@ -134,7 +201,7 @@ fun NotesListScreen(
             }
         },
         floatingActionButton = {
-            if (selectedNoteIds.isEmpty()) {
+            if (selectedNoteIds.isEmpty() && !isSearching) {
                 Column(horizontalAlignment = Alignment.End) {
                     AnimatedVisibility(
                         visible = showFabMenu,
@@ -145,7 +212,6 @@ fun NotesListScreen(
                             horizontalAlignment = Alignment.End,
                             modifier = Modifier.padding(bottom = 16.dp)
                         ) {
-                            // Unified, large clickable pill for Text Note
                             Surface(
                                 onClick = {
                                     showFabMenu = false
@@ -174,7 +240,6 @@ fun NotesListScreen(
                                 }
                             }
 
-                            // Unified, large clickable pill for Checklist
                             Surface(
                                 onClick = {
                                     showFabMenu = false
@@ -233,6 +298,15 @@ fun NotesListScreen(
                 ) {
                     Text("No active notes. Create your first one!")
                 }
+            } else if (displayedNotes.isEmpty() && isSearching) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No notes found matching \"$searchQuery\"")
+                }
             } else {
                 LazyVerticalStaggeredGrid(
                     columns = StaggeredGridCells.Fixed(if (isGridView) 2 else 1),
@@ -243,7 +317,7 @@ fun NotesListScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalItemSpacing = 8.dp
                 ) {
-                    items(notes, key = { it.id }) { note ->
+                    items(displayedNotes, key = { it.id }) { note ->
                         val isSelected = selectedNoteIds.contains(note.id)
 
                         val dismissState = rememberSwipeToDismissBoxState(
@@ -338,6 +412,11 @@ fun NotesListScreen(
                                                 if (selectedNoteIds.isNotEmpty()) {
                                                     selectedNoteIds = if (isSelected) selectedNoteIds - note.id else selectedNoteIds + note.id
                                                 } else {
+                                                    // Close search when opening a note
+                                                    if (isSearching) {
+                                                        isSearching = false
+                                                        searchQuery = ""
+                                                    }
                                                     onNavigateToEditor(note.id, false)
                                                 }
                                             },
