@@ -27,10 +27,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -53,7 +55,12 @@ import kotlinx.coroutines.launch
 @AndroidEntryPoint
 class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Must be called before super.onCreate
+        val splashScreen = installSplashScreen()
+
         super.onCreate(savedInstanceState)
+
+        // Base transparent system bars, Theme.kt handles the icon colors synchronously now
         enableEdgeToEdge()
 
         setContent {
@@ -65,6 +72,9 @@ class MainActivity : FragmentActivity() {
             var isDataStoreLoaded by rememberSaveable { mutableStateOf(false) }
 
             val lifecycleOwner = LocalLifecycleOwner.current
+
+            // Hold splash screen until preferences are fully loaded
+            splashScreen.setKeepOnScreenCondition { !isDataStoreLoaded }
 
             LaunchedEffect(Unit) {
                 if (!isDataStoreLoaded) {
@@ -110,33 +120,33 @@ class MainActivity : FragmentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    if (!isDataStoreLoaded) {
-                        Box(Modifier.fillMaxSize())
-                    } else if (!preferences.isAppLockEnabled || isUnlocked) {
-                        FlexyNotesNavigation(
-                            preferences = preferences,
-                            onUpdatePreferences = { update -> mainViewModel.updatePreferences(update) }
-                        )
-                    } else {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(
-                                    imageVector = Icons.Default.Lock,
-                                    contentDescription = "Locked",
-                                    modifier = Modifier.size(64.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(Modifier.height(16.dp))
-                                Text(
-                                    text = "FlexyNotes is Locked",
-                                    style = MaterialTheme.typography.headlineSmall
-                                )
-                                Spacer(Modifier.height(24.dp))
-                                Button(onClick = { showPromptTrigger = true }) {
-                                    Text("Unlock")
+                    if (isDataStoreLoaded) {
+                        if (!preferences.isAppLockEnabled || isUnlocked) {
+                            FlexyNotesNavigation(
+                                preferences = preferences,
+                                onUpdatePreferences = { update -> mainViewModel.updatePreferences(update) }
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        imageVector = Icons.Default.Lock,
+                                        contentDescription = "Locked",
+                                        modifier = Modifier.size(64.dp),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(Modifier.height(16.dp))
+                                    Text(
+                                        text = "FlexyNotes is Locked",
+                                        style = MaterialTheme.typography.headlineSmall
+                                    )
+                                    Spacer(Modifier.height(24.dp))
+                                    Button(onClick = { showPromptTrigger = true }) {
+                                        Text("Unlock")
+                                    }
                                 }
                             }
                         }
@@ -180,10 +190,11 @@ fun FlexyNotesNavigation(
     val scope = rememberCoroutineScope()
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route ?: "notes_list"
+    val currentFullRoute = navBackStackEntry?.destination?.route ?: "notes_list"
+    val currentRoute = currentFullRoute.substringBefore("/")
 
     var isGridView by rememberSaveable { mutableStateOf(true) }
-    val gesturesEnabled = currentRoute.startsWith("note_editor") == false
+    val gesturesEnabled = !currentFullRoute.startsWith("note_editor")
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -203,13 +214,14 @@ fun FlexyNotesNavigation(
                     label = { Text("Notes") },
                     selected = currentRoute == "notes_list",
                     onClick = {
+                        scope.launch { drawerState.close() }
                         if (currentRoute != "notes_list") {
                             navController.navigate("notes_list") {
+                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                                 launchSingleTop = true
-                                popUpTo("notes_list") { inclusive = false }
+                                restoreState = true
                             }
                         }
-                        scope.launch { drawerState.close() }
                     },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
@@ -218,10 +230,14 @@ fun FlexyNotesNavigation(
                     label = { Text("Archive") },
                     selected = currentRoute == "archive",
                     onClick = {
-                        if (currentRoute != "archive") {
-                            navController.navigate("archive") { launchSingleTop = true }
-                        }
                         scope.launch { drawerState.close() }
+                        if (currentRoute != "archive") {
+                            navController.navigate("archive") {
+                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
                     },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
@@ -230,10 +246,14 @@ fun FlexyNotesNavigation(
                     label = { Text("Trash") },
                     selected = currentRoute == "trash",
                     onClick = {
-                        if (currentRoute != "trash") {
-                            navController.navigate("trash") { launchSingleTop = true }
-                        }
                         scope.launch { drawerState.close() }
+                        if (currentRoute != "trash") {
+                            navController.navigate("trash") {
+                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
                     },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
@@ -245,10 +265,14 @@ fun FlexyNotesNavigation(
                     label = { Text("Settings") },
                     selected = currentRoute == "settings",
                     onClick = {
-                        if (currentRoute != "settings") {
-                            navController.navigate("settings") { launchSingleTop = true }
-                        }
                         scope.launch { drawerState.close() }
+                        if (currentRoute != "settings") {
+                            navController.navigate("settings") {
+                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
                     },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
@@ -328,11 +352,9 @@ fun FlexyNotesNavigation(
                     fadeOut(animationSpec = tween(300)) + scaleOut(targetScale = 0.9f, animationSpec = tween(300))
                 },
                 popEnterTransition = {
-                    // The background screen scales up slightly, without fading in, so it's instantly visible behind the Note
                     scaleIn(initialScale = 0.9f, animationSpec = tween(350))
                 },
                 popExitTransition = {
-                    // Shrinks heavily (0.65f) for high sensitivity, slides out, and stays completely opaque (no fadeOut) like a solid picture
                     slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(350)) +
                             scaleOut(targetScale = 0.65f, animationSpec = tween(350))
                 }

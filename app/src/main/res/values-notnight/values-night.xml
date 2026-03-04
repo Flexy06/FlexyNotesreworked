@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Offizieller Splash Screen für den Light Mode -->
+    <!-- Offizieller Splash Screen für den Dark Mode -->
     <style name="Theme.App.Starting" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">#F3F4F9</item>
+        <item name="windowSplashScreenBackground">#141218</item>
         <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
         <item name="postSplashScreenTheme">@style/Theme.FlexyNotesreworked</item>
     </style>
 
-    <style name="Theme.FlexyNotesreworked" parent="android:Theme.Material.Light.NoActionBar">
+    <style name="Theme.FlexyNotesreworked" parent="android:Theme.Material.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
