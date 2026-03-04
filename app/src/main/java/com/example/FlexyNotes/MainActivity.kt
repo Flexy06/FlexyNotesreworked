@@ -259,7 +259,7 @@ fun FlexyNotesNavigation(
                 ArchiveScreen(
                     viewModel = viewModel,
                     isGridView = isGridView,
-                    useHaptics = preferences.useHaptics, // Added missing parameter
+                    useHaptics = preferences.useHaptics,
                     onOpenDrawer = { scope.launch { drawerState.open() } },
                     onNavigateToEditor = { noteId -> navController.navigate("note_editor/${noteId}?isChecklist=false") }
                 )
@@ -269,6 +269,7 @@ fun FlexyNotesNavigation(
                 TrashScreen(
                     viewModel = viewModel,
                     isGridView = isGridView,
+                    useHaptics = preferences.useHaptics, // Added missing parameter
                     onOpenDrawer = { scope.launch { drawerState.open() } }
                 )
             }
