@@ -45,7 +45,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
-class MainActivity : FragmentActivity() { // Using FragmentActivity avoids Theme.AppCompat crashes
+class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -60,7 +60,6 @@ class MainActivity : FragmentActivity() { // Using FragmentActivity avoids Theme
 
             val lifecycleOwner = LocalLifecycleOwner.current
 
-            // Wait briefly on cold start for DataStore to load actual preferences
             LaunchedEffect(Unit) {
                 if (!isDataStoreLoaded) {
                     delay(100)
@@ -68,19 +67,17 @@ class MainActivity : FragmentActivity() { // Using FragmentActivity avoids Theme
                 }
             }
 
-            // Lock the app automatically when sent to background
             DisposableEffect(lifecycleOwner) {
                 val observer = LifecycleEventObserver { _, event ->
                     if (event == Lifecycle.Event.ON_STOP) {
                         isUnlocked = false
-                        showPromptTrigger = true // Ensure prompt shows when returning
+                        showPromptTrigger = true
                     }
                 }
                 lifecycleOwner.lifecycle.addObserver(observer)
                 onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
             }
 
-            // Secure Mode Logic
             LaunchedEffect(preferences.isSecureMode) {
                 if (preferences.isSecureMode) {
                     window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
@@ -89,10 +86,9 @@ class MainActivity : FragmentActivity() { // Using FragmentActivity avoids Theme
                 }
             }
 
-            // Trigger biometric prompt based on state
             LaunchedEffect(preferences.isAppLockEnabled, isUnlocked, showPromptTrigger, isDataStoreLoaded) {
                 if (isDataStoreLoaded && preferences.isAppLockEnabled && !isUnlocked && showPromptTrigger) {
-                    showPromptTrigger = false // Consume trigger to avoid infinite loops on cancel
+                    showPromptTrigger = false
                     showBiometricPrompt { success ->
                         isUnlocked = success
                     }
@@ -109,7 +105,6 @@ class MainActivity : FragmentActivity() { // Using FragmentActivity avoids Theme
                     color = MaterialTheme.colorScheme.background
                 ) {
                     if (!isDataStoreLoaded) {
-                        // Empty screen while waiting for initial preferences
                         Box(Modifier.fillMaxSize())
                     } else if (!preferences.isAppLockEnabled || isUnlocked) {
                         FlexyNotesNavigation(
@@ -117,7 +112,6 @@ class MainActivity : FragmentActivity() { // Using FragmentActivity avoids Theme
                             onUpdatePreferences = { update -> mainViewModel.updatePreferences(update) }
                         )
                     } else {
-                        // Locked Screen UI (Shown if user cancels prompt or just opened app)
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
@@ -156,7 +150,6 @@ class MainActivity : FragmentActivity() { // Using FragmentActivity avoids Theme
 
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                 super.onAuthenticationError(errorCode, errString)
-                // If user cancels, they see the fallback "Unlock" button screen
                 onResult(false)
             }
         })
@@ -255,7 +248,6 @@ fun FlexyNotesNavigation(
                     isGridView = isGridView,
                     useHaptics = preferences.useHaptics,
                     onGridViewToggle = { isGridView = !isGridView },
-                    // Routing is updated to include isChecklist
                     onNavigateToEditor = { noteId, isChecklist ->
                         navController.navigate("note_editor/${noteId ?: -1L}?isChecklist=$isChecklist")
                     },
@@ -267,6 +259,7 @@ fun FlexyNotesNavigation(
                 ArchiveScreen(
                     viewModel = viewModel,
                     isGridView = isGridView,
+                    useHaptics = preferences.useHaptics, // Added missing parameter
                     onOpenDrawer = { scope.launch { drawerState.open() } },
                     onNavigateToEditor = { noteId -> navController.navigate("note_editor/${noteId}?isChecklist=false") }
                 )
@@ -287,7 +280,6 @@ fun FlexyNotesNavigation(
                 )
             }
 
-            // New route with query parameter for checklist
             composable(
                 route = "note_editor/{noteId}?isChecklist={isChecklist}",
                 arguments = listOf(
@@ -303,7 +295,7 @@ fun FlexyNotesNavigation(
                 NoteEditorScreen(
                     viewModel = viewModel,
                     noteId = noteId,
-                    isChecklist = isChecklist, // Passed successfully to the editor
+                    isChecklist = isChecklist,
                     showTimestamp = preferences.showTimestamp,
                     useHaptics = preferences.useHaptics,
                     onNavigateBack = { navController.popBackStack() }
