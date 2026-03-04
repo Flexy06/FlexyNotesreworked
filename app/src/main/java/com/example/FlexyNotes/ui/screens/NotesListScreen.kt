@@ -34,7 +34,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -146,57 +145,61 @@ fun NotesListScreen(
                             horizontalAlignment = Alignment.End,
                             modifier = Modifier.padding(bottom = 16.dp)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(bottom = 16.dp)
+                            // Unified, large clickable pill for Text Note
+                            Surface(
+                                onClick = {
+                                    showFabMenu = false
+                                    onNavigateToEditor(null, false)
+                                },
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                shadowElevation = 4.dp,
+                                modifier = Modifier.padding(bottom = 12.dp)
                             ) {
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant,
-                                    shadowElevation = 2.dp,
-                                    modifier = Modifier.padding(end = 12.dp)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp)
                                 ) {
                                     Text(
                                         text = "Text Note",
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                        style = MaterialTheme.typography.labelLarge
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
                                     )
-                                }
-                                SmallFloatingActionButton(
-                                    onClick = {
-                                        showFabMenu = false
-                                        onNavigateToEditor(null, false)
-                                    },
-                                    containerColor = MaterialTheme.colorScheme.secondaryContainer
-                                ) {
-                                    Icon(Icons.Default.Description, contentDescription = "New Text Note")
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Icon(
+                                        Icons.Default.Description,
+                                        contentDescription = "New Text Note",
+                                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
                                 }
                             }
 
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
+                            // Unified, large clickable pill for Checklist
+                            Surface(
+                                onClick = {
+                                    showFabMenu = false
+                                    onNavigateToEditor(null, true)
+                                },
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                shadowElevation = 4.dp,
                                 modifier = Modifier.padding(bottom = 8.dp)
                             ) {
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant,
-                                    shadowElevation = 2.dp,
-                                    modifier = Modifier.padding(end = 12.dp)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp)
                                 ) {
                                     Text(
                                         text = "Checklist",
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                        style = MaterialTheme.typography.labelLarge
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
                                     )
-                                }
-                                SmallFloatingActionButton(
-                                    onClick = {
-                                        showFabMenu = false
-                                        onNavigateToEditor(null, true)
-                                    },
-                                    containerColor = MaterialTheme.colorScheme.secondaryContainer
-                                ) {
-                                    Icon(Icons.Default.Checklist, contentDescription = "New Checklist")
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Icon(
+                                        Icons.Default.Checklist,
+                                        contentDescription = "New Checklist",
+                                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
                                 }
                             }
                         }
