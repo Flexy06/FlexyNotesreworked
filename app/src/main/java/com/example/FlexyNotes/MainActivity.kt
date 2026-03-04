@@ -204,7 +204,10 @@ fun FlexyNotesNavigation(
                     selected = currentRoute == "notes_list",
                     onClick = {
                         if (currentRoute != "notes_list") {
-                            navController.navigate("notes_list") { popUpTo("notes_list") { inclusive = true } }
+                            navController.navigate("notes_list") {
+                                launchSingleTop = true
+                                popUpTo("notes_list") { inclusive = false }
+                            }
                         }
                         scope.launch { drawerState.close() }
                     },
@@ -216,7 +219,7 @@ fun FlexyNotesNavigation(
                     selected = currentRoute == "archive",
                     onClick = {
                         if (currentRoute != "archive") {
-                            navController.navigate("archive")
+                            navController.navigate("archive") { launchSingleTop = true }
                         }
                         scope.launch { drawerState.close() }
                     },
@@ -228,7 +231,7 @@ fun FlexyNotesNavigation(
                     selected = currentRoute == "trash",
                     onClick = {
                         if (currentRoute != "trash") {
-                            navController.navigate("trash")
+                            navController.navigate("trash") { launchSingleTop = true }
                         }
                         scope.launch { drawerState.close() }
                     },
@@ -243,7 +246,7 @@ fun FlexyNotesNavigation(
                     selected = currentRoute == "settings",
                     onClick = {
                         if (currentRoute != "settings") {
-                            navController.navigate("settings")
+                            navController.navigate("settings") { launchSingleTop = true }
                         }
                         scope.launch { drawerState.close() }
                     },
@@ -325,13 +328,13 @@ fun FlexyNotesNavigation(
                     fadeOut(animationSpec = tween(300)) + scaleOut(targetScale = 0.9f, animationSpec = tween(300))
                 },
                 popEnterTransition = {
-                    // Brings the list back smoothly from the background
-                    fadeIn(animationSpec = tween(350)) + scaleIn(initialScale = 0.9f, animationSpec = tween(350))
+                    // The background screen scales up slightly, without fading in, so it's instantly visible behind the Note
+                    scaleIn(initialScale = 0.9f, animationSpec = tween(350))
                 },
                 popExitTransition = {
-                    // Shrinks the editor deeply to match the native back predictive behavior on Android 14
-                    scaleOut(targetScale = 0.75f, animationSpec = tween(350)) +
-                            fadeOut(animationSpec = tween(350))
+                    // Shrinks heavily (0.65f) for high sensitivity, slides out, and stays completely opaque (no fadeOut) like a solid picture
+                    slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(350)) +
+                            scaleOut(targetScale = 0.65f, animationSpec = tween(350))
                 }
             ) { backStackEntry ->
                 val viewModel: NotesViewModel = hiltViewModel()
