@@ -85,7 +85,6 @@ fun NoteEditorScreen(
     val contentState = rememberTextFieldState()
 
     val checklistItems = remember { mutableStateListOf<ChecklistItemState>() }
-
     val checklistFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
     var itemToFocus by remember { mutableStateOf<String?>(null) }
 
@@ -111,13 +110,13 @@ fun NoteEditorScreen(
     LaunchedEffect(noteId) {
         if (noteId == null) {
             delay(100)
-
             if (!actualIsChecklist) {
                 try {
                     contentFocusRequester.requestFocus()
-                } catch (_e: Exception) {}
+                } catch (_: Exception) {
+                    // Correctly ignoring the exception to suppress the warning
+                }
             }
-
             if (isChecklist && checklistItems.isEmpty()) {
                 val initialItem = ChecklistItemState("", false)
                 checklistItems.add(initialItem)
@@ -165,7 +164,6 @@ fun NoteEditorScreen(
                                     if (existingNote!!.title.isNotBlank()) appendLine(existingNote!!.title)
                                     if (existingNote!!.title.isNotBlank() && existingNote!!.content.isNotBlank()) appendLine()
 
-                                    // Replace brackets with nice symbols for sharing
                                     val formattedContent = if (existingNote!!.isChecklist) {
                                         existingNote!!.content.replace("[ ] ", "☐ ").replace("[x] ", "☑ ")
                                     } else {
@@ -203,9 +201,7 @@ fun NoteEditorScreen(
                     Button(
                         onClick = {
                             if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-
                             val titleText = titleState.text.toString()
-
                             val contentText = if (actualIsChecklist) {
                                 checklistItems
                                     .filter { it.text.isNotBlank() || it.isChecked }
@@ -232,39 +228,26 @@ fun NoteEditorScreen(
         },
         contentWindowInsets = WindowInsets.safeDrawing
     ) { paddingValues ->
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(scrollState)
-                .clickable(
-                    interactionSource = interactionSource,
-                    indication = null
-                ) {
-                    if (!actualIsChecklist) {
-                        contentFocusRequester.requestFocus()
-                    }
+                .clickable(interactionSource = interactionSource, indication = null) {
+                    if (!actualIsChecklist) contentFocusRequester.requestFocus()
                 }
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-
             BasicTextField(
                 state = titleState,
                 modifier = Modifier.fillMaxWidth(),
-                textStyle = MaterialTheme.typography.headlineMedium.copy(
-                    color = MaterialTheme.colorScheme.onSurface
-                ),
+                textStyle = MaterialTheme.typography.headlineMedium.copy(color = MaterialTheme.colorScheme.onSurface),
                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                 lineLimits = androidx.compose.foundation.text.input.TextFieldLineLimits.SingleLine,
                 decorator = { innerTextField ->
                     Box {
                         if (titleState.text.isEmpty()) {
-                            Text(
-                                "Title",
-                                style = MaterialTheme.typography.headlineMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                            )
+                            Text("Title", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
                         }
                         innerTextField()
                     }
@@ -272,21 +255,11 @@ fun NoteEditorScreen(
             )
 
             if (showTimestamp && existingNote != null) {
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
-
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()) }
                 val createdStr = remember(existingNote?.createdAt) { existingNote?.createdAt?.let { dateFormat.format(Date(it)) } ?: "" }
                 val editedStr = remember(existingNote?.modifiedAt) { existingNote?.modifiedAt?.let { dateFormat.format(Date(it)) } ?: "" }
-
-                Text(
-                    text = "Created: $createdStr   Edited: $editedStr",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
+                Text(text = "Created: $createdStr   Edited: $editedStr", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 16.dp))
             } else {
                 Spacer(modifier = Modifier.height(16.dp))
             }
@@ -296,21 +269,11 @@ fun NoteEditorScreen(
                     checklistItems.forEachIndexed { index, item ->
                         val itemFocusRequester = remember(item.id) { FocusRequester() }
                         checklistFocusRequesters[item.id] = itemFocusRequester
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                        ) {
-                            Checkbox(
-                                checked = item.isChecked,
-                                onCheckedChange = {
-                                    item.isChecked = it
-                                    if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                }
-                            )
-
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                            Checkbox(checked = item.isChecked, onCheckedChange = {
+                                item.isChecked = it
+                                if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            })
                             BasicTextField(
                                 value = item.text,
                                 onValueChange = { newValue ->
@@ -320,40 +283,23 @@ fun NoteEditorScreen(
                                         val newItem = ChecklistItemState(parts.getOrNull(1) ?: "", false)
                                         checklistItems.add(index + 1, newItem)
                                         itemToFocus = newItem.id
-                                    } else {
-                                        item.text = newValue
-                                    }
+                                    } else item.text = newValue
                                 },
-                                textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    textDecoration = if (item.isChecked) TextDecoration.LineThrough else null
-                                ),
+                                textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface, textDecoration = if (item.isChecked) TextDecoration.LineThrough else null),
                                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .padding(horizontal = 8.dp)
-                                    .focusRequester(itemFocusRequester)
+                                modifier = Modifier.weight(1f).padding(horizontal = 8.dp).focusRequester(itemFocusRequester)
                             )
-
                             IconButton(onClick = { checklistItems.removeAt(index) }) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Remove item",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                Icon(Icons.Default.Close, contentDescription = "Remove item", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
-
-                    TextButton(
-                        onClick = {
-                            val newItem = ChecklistItemState("", false)
-                            checklistItems.add(newItem)
-                            itemToFocus = newItem.id
-                            if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        },
-                        modifier = Modifier.padding(start = 4.dp, top = 8.dp)
-                    ) {
+                    TextButton(onClick = {
+                        val newItem = ChecklistItemState("", false)
+                        checklistItems.add(newItem)
+                        itemToFocus = newItem.id
+                        if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    }, modifier = Modifier.padding(start = 4.dp, top = 8.dp)) {
                         Icon(Icons.Default.Add, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
                         Text("Add Item")
@@ -362,29 +308,19 @@ fun NoteEditorScreen(
             } else {
                 BasicTextField(
                     state = contentState,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .defaultMinSize(minHeight = 400.dp)
-                        .focusRequester(contentFocusRequester),
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(
-                        color = MaterialTheme.colorScheme.onSurface
-                    ),
+                    modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 400.dp).focusRequester(contentFocusRequester),
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                     decorator = { innerTextField ->
                         Box(modifier = Modifier.fillMaxSize()) {
                             if (contentState.text.isEmpty()) {
-                                Text(
-                                    "Note",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                                )
+                                Text("Note", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
                             }
                             innerTextField()
                         }
                     }
                 )
             }
-
             Spacer(modifier = Modifier.height(100.dp))
         }
     }
