@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.defaultMinSize
@@ -13,16 +14,20 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -30,13 +35,16 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -44,6 +52,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.example.FlexyNotes.data.NoteEntity
 import com.example.FlexyNotes.viewmodel.NotesViewModel
@@ -51,18 +60,36 @@ import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
+
+// State class for individual checklist items to ensure proper UI updates
+class ChecklistItemState(
+    initialText: String,
+    initialChecked: Boolean
+) {
+    val id: String = UUID.randomUUID().toString()
+    var text by mutableStateOf(initialText)
+    var isChecked by mutableStateOf(initialChecked)
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoteEditorScreen(
     viewModel: NotesViewModel,
     noteId: Long?,
+    isChecklist: Boolean,
     showTimestamp: Boolean,
     useHaptics: Boolean,
     onNavigateBack: () -> Unit
 ) {
     val titleState = rememberTextFieldState()
     val contentState = rememberTextFieldState()
+
+    val checklistItems = remember { mutableStateListOf<ChecklistItemState>() }
+
+    // Manage dynamic focus for new checklist items created via 'Enter'
+    val checklistFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    var itemToFocus by remember { mutableStateOf<String?>(null) }
 
     var existingNote by remember { mutableStateOf<NoteEntity?>(null) }
 
@@ -73,16 +100,55 @@ fun NoteEditorScreen(
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
 
+    val actualIsChecklist = existingNote?.isChecklist ?: isChecklist
+
+    // Handles focusing newly created checklist items automatically
+    LaunchedEffect(itemToFocus) {
+        itemToFocus?.let { id ->
+            delay(50)
+            checklistFocusRequesters[id]?.requestFocus()
+            itemToFocus = null
+        }
+    }
+
     LaunchedEffect(noteId) {
         if (noteId == null) {
             delay(100)
-            contentFocusRequester.requestFocus()
+
+            if (!actualIsChecklist) {
+                try {
+                    contentFocusRequester.requestFocus()
+                } catch (e: Exception) {}
+            }
+
+            if (isChecklist && checklistItems.isEmpty()) {
+                val initialItem = ChecklistItemState("", false)
+                checklistItems.add(initialItem)
+                itemToFocus = initialItem.id
+            }
         } else {
             val note = viewModel.getNoteById(noteId)
             if (note != null) {
                 existingNote = note
                 titleState.setTextAndPlaceCursorAtEnd(note.title)
-                contentState.setTextAndPlaceCursorAtEnd(note.content)
+
+                if (note.isChecklist) {
+                    checklistItems.clear()
+                    if (note.content.isNotBlank()) {
+                        val parsedItems = note.content.lines().map { line ->
+                            if (line.startsWith("[x] ")) {
+                                ChecklistItemState(line.removePrefix("[x] "), true)
+                            } else if (line.startsWith("[ ] ")) {
+                                ChecklistItemState(line.removePrefix("[ ] "), false)
+                            } else {
+                                ChecklistItemState(line, false)
+                            }
+                        }
+                        checklistItems.addAll(parsedItems)
+                    }
+                } else {
+                    contentState.setTextAndPlaceCursorAtEnd(note.content)
+                }
             }
         }
     }
@@ -93,7 +159,6 @@ fun NoteEditorScreen(
                 title = { },
                 actions = {
                     if (existingNote != null) {
-                        // Share Action
                         IconButton(onClick = {
                             if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
 
@@ -135,13 +200,20 @@ fun NoteEditorScreen(
                             if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
 
                             val titleText = titleState.text.toString()
-                            val contentText = contentState.text.toString()
+
+                            val contentText = if (actualIsChecklist) {
+                                checklistItems
+                                    .filter { it.text.isNotBlank() || it.isChecked }
+                                    .joinToString("\n") { if (it.isChecked) "[x] ${it.text}" else "[ ] ${it.text}" }
+                            } else {
+                                contentState.text.toString()
+                            }
 
                             if (titleText.isNotBlank() || contentText.isNotBlank()) {
                                 if (existingNote != null) {
                                     viewModel.updateNote(existingNote!!, titleText, contentText)
                                 } else {
-                                    viewModel.addNote(titleText, contentText)
+                                    viewModel.addNote(titleText, contentText, actualIsChecklist)
                                 }
                             }
                             onNavigateBack()
@@ -165,7 +237,9 @@ fun NoteEditorScreen(
                     interactionSource = interactionSource,
                     indication = null
                 ) {
-                    contentFocusRequester.requestFocus()
+                    if (!actualIsChecklist) {
+                        contentFocusRequester.requestFocus()
+                    }
                 }
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
@@ -212,29 +286,100 @@ fun NoteEditorScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            BasicTextField(
-                state = contentState,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .defaultMinSize(minHeight = 400.dp)
-                    .focusRequester(contentFocusRequester),
-                textStyle = MaterialTheme.typography.bodyLarge.copy(
-                    color = MaterialTheme.colorScheme.onSurface
-                ),
-                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                decorator = { innerTextField ->
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        if (contentState.text.isEmpty()) {
-                            Text(
-                                "Note",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            if (actualIsChecklist) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    checklistItems.forEachIndexed { index, item ->
+                        val itemFocusRequester = remember(item.id) { FocusRequester() }
+                        checklistFocusRequesters[item.id] = itemFocusRequester
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                        ) {
+                            Checkbox(
+                                checked = item.isChecked,
+                                onCheckedChange = {
+                                    item.isChecked = it
+                                    if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
                             )
+
+                            BasicTextField(
+                                value = item.text,
+                                onValueChange = { newValue ->
+                                    // Detect Enter Key (newline character) to spawn a new item
+                                    if (newValue.contains('\n')) {
+                                        val parts = newValue.split('\n', limit = 2)
+                                        item.text = parts[0]
+                                        val newItem = ChecklistItemState(parts.getOrNull(1) ?: "", false)
+                                        checklistItems.add(index + 1, newItem)
+                                        itemToFocus = newItem.id
+                                    } else {
+                                        item.text = newValue
+                                    }
+                                },
+                                textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    textDecoration = if (item.isChecked) TextDecoration.LineThrough else null
+                                ),
+                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(horizontal = 8.dp)
+                                    .focusRequester(itemFocusRequester)
+                            )
+
+                            IconButton(onClick = { checklistItems.removeAt(index) }) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Remove item",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
-                        innerTextField()
+                    }
+
+                    TextButton(
+                        onClick = {
+                            val newItem = ChecklistItemState("", false)
+                            checklistItems.add(newItem)
+                            itemToFocus = newItem.id
+                            if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        },
+                        modifier = Modifier.padding(start = 4.dp, top = 8.dp)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Add Item")
                     }
                 }
-            )
+            } else {
+                BasicTextField(
+                    state = contentState,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(minHeight = 400.dp)
+                        .focusRequester(contentFocusRequester),
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                        color = MaterialTheme.colorScheme.onSurface
+                    ),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    decorator = { innerTextField ->
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            if (contentState.text.isEmpty()) {
+                                Text(
+                                    "Note",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                )
+                            }
+                            innerTextField()
+                        }
+                    }
+                )
+            }
 
             Spacer(modifier = Modifier.height(100.dp))
         }

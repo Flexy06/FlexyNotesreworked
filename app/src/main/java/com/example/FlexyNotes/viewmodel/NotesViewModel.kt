@@ -74,11 +74,13 @@ class NotesViewModel @Inject constructor(
         return repository.getNoteById(id)
     }
 
-    fun addNote(title: String, content: String) {
+    // Added isChecklist parameter
+    fun addNote(title: String, content: String, isChecklist: Boolean = false) {
         viewModelScope.launch {
             val newNote = NoteEntity(
                 title = title,
                 content = content,
+                isChecklist = isChecklist,
                 createdAt = System.currentTimeMillis(),
                 modifiedAt = System.currentTimeMillis()
             )

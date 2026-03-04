@@ -6,7 +6,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Archive
@@ -26,10 +25,12 @@ import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.FlexyNotes.data.UserPreferences
 import com.example.FlexyNotes.ui.screens.ArchiveScreen
 import com.example.FlexyNotes.ui.screens.NoteEditorScreen
@@ -254,7 +255,10 @@ fun FlexyNotesNavigation(
                     isGridView = isGridView,
                     useHaptics = preferences.useHaptics,
                     onGridViewToggle = { isGridView = !isGridView },
-                    onNavigateToEditor = { noteId -> navController.navigate("note_editor/${noteId ?: -1L}") },
+                    // Routing is updated to include isChecklist
+                    onNavigateToEditor = { noteId, isChecklist ->
+                        navController.navigate("note_editor/${noteId ?: -1L}?isChecklist=$isChecklist")
+                    },
                     onOpenDrawer = { scope.launch { drawerState.open() } }
                 )
             }
@@ -264,7 +268,7 @@ fun FlexyNotesNavigation(
                     viewModel = viewModel,
                     isGridView = isGridView,
                     onOpenDrawer = { scope.launch { drawerState.open() } },
-                    onNavigateToEditor = { noteId -> navController.navigate("note_editor/${noteId}") }
+                    onNavigateToEditor = { noteId -> navController.navigate("note_editor/${noteId}?isChecklist=false") }
                 )
             }
             composable("trash") {
@@ -282,14 +286,24 @@ fun FlexyNotesNavigation(
                     onOpenDrawer = { scope.launch { drawerState.open() } }
                 )
             }
-            composable("note_editor/{noteId}") { backStackEntry ->
+
+            // New route with query parameter for checklist
+            composable(
+                route = "note_editor/{noteId}?isChecklist={isChecklist}",
+                arguments = listOf(
+                    navArgument("noteId") { type = NavType.StringType; nullable = true },
+                    navArgument("isChecklist") { type = NavType.BoolType; defaultValue = false }
+                )
+            ) { backStackEntry ->
                 val viewModel: NotesViewModel = hiltViewModel()
                 val noteIdStr = backStackEntry.arguments?.getString("noteId")
                 val noteId = noteIdStr?.toLongOrNull()?.takeIf { it != -1L }
+                val isChecklist = backStackEntry.arguments?.getBoolean("isChecklist") ?: false
 
                 NoteEditorScreen(
                     viewModel = viewModel,
                     noteId = noteId,
+                    isChecklist = isChecklist, // Passed successfully to the editor
                     showTimestamp = preferences.showTimestamp,
                     useHaptics = preferences.useHaptics,
                     onNavigateBack = { navController.popBackStack() }
