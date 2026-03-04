@@ -6,6 +6,12 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Archive
@@ -197,7 +203,9 @@ fun FlexyNotesNavigation(
                     label = { Text("Notes") },
                     selected = currentRoute == "notes_list",
                     onClick = {
-                        navController.navigate("notes_list") { popUpTo("notes_list") { inclusive = true } }
+                        if (currentRoute != "notes_list") {
+                            navController.navigate("notes_list") { popUpTo("notes_list") { inclusive = true } }
+                        }
                         scope.launch { drawerState.close() }
                     },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -207,7 +215,9 @@ fun FlexyNotesNavigation(
                     label = { Text("Archive") },
                     selected = currentRoute == "archive",
                     onClick = {
-                        navController.navigate("archive")
+                        if (currentRoute != "archive") {
+                            navController.navigate("archive")
+                        }
                         scope.launch { drawerState.close() }
                     },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -217,7 +227,9 @@ fun FlexyNotesNavigation(
                     label = { Text("Trash") },
                     selected = currentRoute == "trash",
                     onClick = {
-                        navController.navigate("trash")
+                        if (currentRoute != "trash") {
+                            navController.navigate("trash")
+                        }
                         scope.launch { drawerState.close() }
                     },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -230,7 +242,9 @@ fun FlexyNotesNavigation(
                     label = { Text("Settings") },
                     selected = currentRoute == "settings",
                     onClick = {
-                        navController.navigate("settings")
+                        if (currentRoute != "settings") {
+                            navController.navigate("settings")
+                        }
                         scope.launch { drawerState.close() }
                     },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -240,7 +254,24 @@ fun FlexyNotesNavigation(
         },
         modifier = Modifier.systemBarsPadding()
     ) {
-        NavHost(navController = navController, startDestination = "notes_list") {
+        NavHost(
+            navController = navController,
+            startDestination = "notes_list",
+            enterTransition = {
+                fadeIn(animationSpec = tween(220, delayMillis = 90)) +
+                        scaleIn(initialScale = 0.95f, animationSpec = tween(220, delayMillis = 90))
+            },
+            exitTransition = {
+                fadeOut(animationSpec = tween(150))
+            },
+            popEnterTransition = {
+                fadeIn(animationSpec = tween(220, delayMillis = 90)) +
+                        scaleIn(initialScale = 0.95f, animationSpec = tween(220, delayMillis = 90))
+            },
+            popExitTransition = {
+                fadeOut(animationSpec = tween(150))
+            }
+        ) {
             composable("notes_list") {
                 val viewModel: NotesViewModel = hiltViewModel()
                 NotesListScreen(
@@ -269,7 +300,7 @@ fun FlexyNotesNavigation(
                 TrashScreen(
                     viewModel = viewModel,
                     isGridView = isGridView,
-                    useHaptics = preferences.useHaptics, // Added missing parameter
+                    useHaptics = preferences.useHaptics,
                     onOpenDrawer = { scope.launch { drawerState.open() } }
                 )
             }
@@ -286,7 +317,22 @@ fun FlexyNotesNavigation(
                 arguments = listOf(
                     navArgument("noteId") { type = NavType.StringType; nullable = true },
                     navArgument("isChecklist") { type = NavType.BoolType; defaultValue = false }
-                )
+                ),
+                enterTransition = {
+                    slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(350))
+                },
+                exitTransition = {
+                    fadeOut(animationSpec = tween(300)) + scaleOut(targetScale = 0.9f, animationSpec = tween(300))
+                },
+                popEnterTransition = {
+                    // Brings the list back smoothly from the background
+                    fadeIn(animationSpec = tween(350)) + scaleIn(initialScale = 0.9f, animationSpec = tween(350))
+                },
+                popExitTransition = {
+                    // Shrinks the editor deeply to match the native back predictive behavior on Android 14
+                    scaleOut(targetScale = 0.75f, animationSpec = tween(350)) +
+                            fadeOut(animationSpec = tween(350))
+                }
             ) { backStackEntry ->
                 val viewModel: NotesViewModel = hiltViewModel()
                 val noteIdStr = backStackEntry.arguments?.getString("noteId")
