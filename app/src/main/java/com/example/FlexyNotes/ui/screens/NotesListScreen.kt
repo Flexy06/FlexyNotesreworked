@@ -252,11 +252,9 @@ fun NotesListScreen(
                                     false
                                 }
                             },
-                            // 40% threshold for higher drag resistance
                             positionalThreshold = { totalDistance -> totalDistance * 0.4f }
                         )
 
-                        // Realtime haptic feedback
                         var previousTarget by remember { mutableStateOf(SwipeToDismissBoxValue.Settled) }
                         LaunchedEffect(dismissState) {
                             snapshotFlow { dismissState.targetValue }.collect { currentTarget ->
@@ -271,15 +269,13 @@ fun NotesListScreen(
                             }
                         }
 
-                        // Calculate physical resistance & snapping
-                        val rawOffset = try { dismissState.requireOffset() } catch(e: Exception) { 0f }
+                        val rawOffset = try { dismissState.requireOffset() } catch(_: Exception) { 0f }
                         val isPastThreshold = dismissState.targetValue != SwipeToDismissBoxValue.Settled
 
-                        // Counteract the swipe by 40% if threshold is not reached -> creates drag resistance
                         val targetResistance = if (!isPastThreshold && rawOffset != 0f) {
                             -rawOffset * 0.4f
                         } else {
-                            0f // Release resistance -> snapping effect
+                            0f
                         }
 
                         val animatedResistance by animateFloatAsState(
@@ -333,7 +329,6 @@ fun NotesListScreen(
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        // Apply the visual resistance offset here
                                         .graphicsLayer { translationX = animatedResistance }
                                         .combinedClickable(
                                             onClick = {

@@ -115,7 +115,7 @@ fun NoteEditorScreen(
             if (!actualIsChecklist) {
                 try {
                     contentFocusRequester.requestFocus()
-                } catch (e: Exception) {}
+                } catch (_e: Exception) {}
             }
 
             if (isChecklist && checklistItems.isEmpty()) {
