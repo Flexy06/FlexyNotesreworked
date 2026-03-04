@@ -1,6 +1,11 @@
 package com.example.FlexyNotes.ui.screens
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -14,8 +19,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
@@ -25,18 +32,27 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -54,12 +70,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.example.FlexyNotes.data.NoteEntity
 import com.example.FlexyNotes.viewmodel.NotesViewModel
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 import java.util.UUID
 
 class ChecklistItemState(
@@ -89,6 +108,15 @@ fun NoteEditorScreen(
     var itemToFocus by remember { mutableStateOf<String?>(null) }
 
     var existingNote by remember { mutableStateOf<NoteEntity?>(null) }
+    var reminderTime by remember { mutableStateOf<Long?>(null) }
+
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
+    val datePickerState = rememberDatePickerState()
+    val timePickerState = rememberTimePickerState(
+        initialHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY),
+        initialMinute = Calendar.getInstance().get(Calendar.MINUTE)
+    )
 
     val contentFocusRequester = remember { FocusRequester() }
     val interactionSource = remember { MutableInteractionSource() }
@@ -98,6 +126,12 @@ fun NoteEditorScreen(
     val context = LocalContext.current
 
     val actualIsChecklist = existingNote?.isChecklist ?: isChecklist
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) showDatePicker = true
+    }
 
     LaunchedEffect(itemToFocus) {
         itemToFocus?.let { id ->
@@ -113,9 +147,7 @@ fun NoteEditorScreen(
             if (!actualIsChecklist) {
                 try {
                     contentFocusRequester.requestFocus()
-                } catch (_: Exception) {
-                    // Correctly ignoring the exception to suppress the warning
-                }
+                } catch (_: Exception) {}
             }
             if (isChecklist && checklistItems.isEmpty()) {
                 val initialItem = ChecklistItemState("", false)
@@ -126,6 +158,7 @@ fun NoteEditorScreen(
             val note = viewModel.getNoteById(noteId)
             if (note != null) {
                 existingNote = note
+                reminderTime = note.reminderTime
                 titleState.setTextAndPlaceCursorAtEnd(note.title)
 
                 if (note.isChecklist) {
@@ -149,11 +182,82 @@ fun NoteEditorScreen(
         }
     }
 
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDatePicker = false
+                    showTimePicker = true
+                }) { Text("Next") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+
+    if (showTimePicker) {
+        AlertDialog(
+            onDismissRequest = { showTimePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    showTimePicker = false
+                    val dateMillis = datePickerState.selectedDateMillis
+                    if (dateMillis != null) {
+                        // Extract date from UTC (how DatePicker returns it)
+                        val utcCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+                            timeInMillis = dateMillis
+                        }
+
+                        // Apply extracted date and chosen time to local timezone calendar
+                        val localCalendar = Calendar.getInstance().apply {
+                            set(Calendar.YEAR, utcCalendar.get(Calendar.YEAR))
+                            set(Calendar.MONTH, utcCalendar.get(Calendar.MONTH))
+                            set(Calendar.DAY_OF_MONTH, utcCalendar.get(Calendar.DAY_OF_MONTH))
+                            set(Calendar.HOUR_OF_DAY, timePickerState.hour)
+                            set(Calendar.MINUTE, timePickerState.minute)
+                            set(Calendar.SECOND, 0)
+                            set(Calendar.MILLISECOND, 0)
+                        }
+
+                        reminderTime = localCalendar.timeInMillis
+                        if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    }
+                }) { Text("Confirm") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTimePicker = false }) { Text("Cancel") }
+            },
+            text = { TimePicker(state = timePickerState) }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { },
                 actions = {
+                    IconButton(onClick = {
+                        if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            val hasPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+                            if (!hasPermission) {
+                                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                return@IconButton
+                            }
+                        }
+                        showDatePicker = true
+                    }) {
+                        Icon(
+                            Icons.Default.Notifications,
+                            contentDescription = "Add Reminder",
+                            tint = if (reminderTime != null) MaterialTheme.colorScheme.primary else LocalContentColor.current
+                        )
+                    }
+
                     if (existingNote != null) {
                         IconButton(onClick = {
                             if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -212,9 +316,9 @@ fun NoteEditorScreen(
 
                             if (titleText.isNotBlank() || contentText.isNotBlank()) {
                                 if (existingNote != null) {
-                                    viewModel.updateNote(existingNote!!, titleText, contentText)
+                                    viewModel.updateNote(existingNote!!, titleText, contentText, reminderTime)
                                 } else {
-                                    viewModel.addNote(titleText, contentText, actualIsChecklist)
+                                    viewModel.addNote(titleText, contentText, actualIsChecklist, reminderTime)
                                 }
                             }
                             onNavigateBack()
@@ -254,7 +358,35 @@ fun NoteEditorScreen(
                 }
             )
 
-            if (showTimestamp && existingNote != null) {
+            if (reminderTime != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                val format = remember { SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()) }
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.clickable { showDatePicker = true }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Notifications, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Reminder: ${format.format(Date(reminderTime!!))}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Spacer(Modifier.width(8.dp))
+                        IconButton(
+                            onClick = {
+                                reminderTime = null
+                                if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            },
+                            modifier = Modifier.size(16.dp)
+                        ) {
+                            Icon(Icons.Default.Close, contentDescription = "Clear reminder", modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            } else if (showTimestamp && existingNote != null) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()) }
                 val createdStr = remember(existingNote?.createdAt) { existingNote?.createdAt?.let { dateFormat.format(Date(it)) } ?: "" }

@@ -2,6 +2,7 @@ package com.example.FlexyNotes
 
 import android.os.Bundle
 import android.view.WindowManager
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.biometric.BiometricManager
@@ -12,6 +13,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Archive
@@ -39,6 +41,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
+import com.example.FlexyNotes.data.ThemeMode
 import com.example.FlexyNotes.data.UserPreferences
 import com.example.FlexyNotes.ui.screens.ArchiveScreen
 import com.example.FlexyNotes.ui.screens.NoteEditorScreen
@@ -55,13 +59,9 @@ import kotlinx.coroutines.launch
 @AndroidEntryPoint
 class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Must be called before super.onCreate
         val splashScreen = installSplashScreen()
 
         super.onCreate(savedInstanceState)
-
-        // Base transparent system bars, Theme.kt handles the icon colors synchronously now
-        enableEdgeToEdge()
 
         setContent {
             val mainViewModel: MainViewModel = hiltViewModel()
@@ -73,7 +73,6 @@ class MainActivity : FragmentActivity() {
 
             val lifecycleOwner = LocalLifecycleOwner.current
 
-            // Hold splash screen until preferences are fully loaded
             splashScreen.setKeepOnScreenCondition { !isDataStoreLoaded }
 
             LaunchedEffect(Unit) {
@@ -81,6 +80,22 @@ class MainActivity : FragmentActivity() {
                     delay(100)
                     isDataStoreLoaded = true
                 }
+            }
+
+            val isSystemDark = isSystemInDarkTheme()
+            val isDarkTheme = when (preferences.themeMode) {
+                ThemeMode.SYSTEM -> isSystemDark
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+            }
+
+            LaunchedEffect(isDarkTheme) {
+                enableEdgeToEdge(
+                    statusBarStyle = if (isDarkTheme) SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+                    else SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
+                    navigationBarStyle = if (isDarkTheme) SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+                    else SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
+                )
             }
 
             DisposableEffect(lifecycleOwner) {
@@ -345,6 +360,8 @@ fun FlexyNotesNavigation(
                     navArgument("noteId") { type = NavType.StringType; nullable = true },
                     navArgument("isChecklist") { type = NavType.BoolType; defaultValue = false }
                 ),
+                // Deep Link Configuration
+                deepLinks = listOf(navDeepLink { uriPattern = "flexynotes://note/{noteId}" }),
                 enterTransition = {
                     slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(350))
                 },

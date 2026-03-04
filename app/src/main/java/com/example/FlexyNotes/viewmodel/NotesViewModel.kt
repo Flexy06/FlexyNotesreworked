@@ -6,6 +6,7 @@ import com.example.FlexyNotes.data.NoteEntity
 import com.example.FlexyNotes.data.SortOrder
 import com.example.FlexyNotes.data.UserPreferencesRepository
 import com.example.FlexyNotes.repository.NoteRepository
+import com.example.FlexyNotes.util.ReminderManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -17,7 +18,8 @@ import javax.inject.Inject
 @HiltViewModel
 class NotesViewModel @Inject constructor(
     private val repository: NoteRepository,
-    userPreferencesRepository: UserPreferencesRepository
+    userPreferencesRepository: UserPreferencesRepository,
+    private val reminderManager: ReminderManager
 ) : ViewModel() {
 
     // Combines DB flows with preferences to sort on the fly
@@ -74,28 +76,38 @@ class NotesViewModel @Inject constructor(
         return repository.getNoteById(id)
     }
 
-    // Added isChecklist parameter
-    fun addNote(title: String, content: String, isChecklist: Boolean = false) {
+    fun addNote(title: String, content: String, isChecklist: Boolean = false, reminderTime: Long? = null) {
         viewModelScope.launch {
             val newNote = NoteEntity(
                 title = title,
                 content = content,
                 isChecklist = isChecklist,
+                reminderTime = reminderTime,
                 createdAt = System.currentTimeMillis(),
                 modifiedAt = System.currentTimeMillis()
             )
-            repository.upsertNote(newNote)
+            val id = repository.upsertNote(newNote)
+            if (reminderTime != null) {
+                reminderManager.scheduleReminder(id, title, content, reminderTime)
+            }
         }
     }
 
-    fun updateNote(note: NoteEntity, newTitle: String, newContent: String) {
+    fun updateNote(note: NoteEntity, newTitle: String, newContent: String, newReminderTime: Long?) {
         viewModelScope.launch {
             val updatedNote = note.copy(
                 title = newTitle,
                 content = newContent,
+                reminderTime = newReminderTime,
                 modifiedAt = System.currentTimeMillis()
             )
             repository.upsertNote(updatedNote)
+
+            if (newReminderTime != null) {
+                reminderManager.scheduleReminder(note.id, newTitle, newContent, newReminderTime)
+            } else if (note.reminderTime != null) {
+                reminderManager.cancelReminder(note.id)
+            }
         }
     }
 

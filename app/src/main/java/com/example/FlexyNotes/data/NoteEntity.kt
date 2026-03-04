@@ -15,5 +15,6 @@ data class NoteEntity(
     val colorArgb: Int? = null,
     val isDeleted: Boolean = false,
     val isArchived: Boolean = false,
-    val isChecklist: Boolean = false // Added for checklist support
+    val isChecklist: Boolean = false,
+    val reminderTime: Long? = null
 )
