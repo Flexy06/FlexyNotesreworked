@@ -10,5 +10,6 @@ data class UserPreferences(
     val sortOrder: SortOrder = SortOrder.DATE_EDITED,
     val showTimestamp: Boolean = false,
     val useHaptics: Boolean = true,
-    val isSecureMode: Boolean = false // New setting for privacy
+    val isSecureMode: Boolean = false,
+    val isAppLockEnabled: Boolean = false // New preference for biometric lock
 )

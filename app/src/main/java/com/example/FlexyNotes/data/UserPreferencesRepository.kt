@@ -27,6 +27,7 @@ class UserPreferencesRepository @Inject constructor(
         val SHOW_TIMESTAMP = booleanPreferencesKey("show_timestamp")
         val USE_HAPTICS = booleanPreferencesKey("use_haptics")
         val IS_SECURE_MODE = booleanPreferencesKey("is_secure_mode")
+        val IS_APP_LOCK_ENABLED = booleanPreferencesKey("is_app_lock_enabled")
     }
 
     val userPreferencesFlow: Flow<UserPreferences> = context.dataStore.data
@@ -38,7 +39,8 @@ class UserPreferencesRepository @Inject constructor(
                 sortOrder = SortOrder.valueOf(preferences[SORT_ORDER] ?: SortOrder.DATE_EDITED.name),
                 showTimestamp = preferences[SHOW_TIMESTAMP] ?: false,
                 useHaptics = preferences[USE_HAPTICS] ?: true,
-                isSecureMode = preferences[IS_SECURE_MODE] ?: false
+                isSecureMode = preferences[IS_SECURE_MODE] ?: false,
+                isAppLockEnabled = preferences[IS_APP_LOCK_ENABLED] ?: false
             )
         }
 
@@ -51,7 +53,8 @@ class UserPreferencesRepository @Inject constructor(
                 sortOrder = SortOrder.valueOf(preferences[SORT_ORDER] ?: SortOrder.DATE_EDITED.name),
                 showTimestamp = preferences[SHOW_TIMESTAMP] ?: false,
                 useHaptics = preferences[USE_HAPTICS] ?: true,
-                isSecureMode = preferences[IS_SECURE_MODE] ?: false
+                isSecureMode = preferences[IS_SECURE_MODE] ?: false,
+                isAppLockEnabled = preferences[IS_APP_LOCK_ENABLED] ?: false
             )
             val updated = update(current)
 
@@ -62,6 +65,7 @@ class UserPreferencesRepository @Inject constructor(
             preferences[SHOW_TIMESTAMP] = updated.showTimestamp
             preferences[USE_HAPTICS] = updated.useHaptics
             preferences[IS_SECURE_MODE] = updated.isSecureMode
+            preferences[IS_APP_LOCK_ENABLED] = updated.isAppLockEnabled
         }
     }
 }

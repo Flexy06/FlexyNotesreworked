@@ -1,37 +1,14 @@
 package com.example.FlexyNotes.ui.screens
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -69,7 +46,6 @@ fun SettingsScreen(
                 .verticalScroll(scrollState)
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-
             SettingsGroup(title = "Appearance") {
                 ListPreference(
                     title = "Theme",
@@ -104,42 +80,14 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            SettingsGroup(title = "Behavior") {
-                ListPreference(
-                    title = "Default Sort Order",
-                    subtitle = when (preferences.sortOrder) {
-                        SortOrder.DATE_EDITED -> "Last edited"
-                        SortOrder.DATE_CREATED -> "Creation date"
-                        SortOrder.ALPHABETICAL -> "Alphabetical (A-Z)"
-                    },
-                    options = mapOf(
-                        SortOrder.DATE_EDITED to "Last edited",
-                        SortOrder.DATE_CREATED to "Creation date",
-                        SortOrder.ALPHABETICAL to "Alphabetical (A-Z)"
-                    ),
-                    selectedValue = preferences.sortOrder,
-                    onValueSelected = { newSort -> onUpdatePreferences { it.copy(sortOrder = newSort) } }
-                )
-
-                SwitchPreference(
-                    title = "Show Timestamps",
-                    subtitle = "Display dates on notes in the list",
-                    checked = preferences.showTimestamp,
-                    onCheckedChange = { newVal -> onUpdatePreferences { it.copy(showTimestamp = newVal) } }
-                )
-
-                SwitchPreference(
-                    title = "Haptic Feedback",
-                    subtitle = "Vibrate on swipes and actions",
-                    checked = preferences.useHaptics,
-                    onCheckedChange = { newVal -> onUpdatePreferences { it.copy(useHaptics = newVal) } }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // New Privacy Group
             SettingsGroup(title = "Privacy") {
+                SwitchPreference(
+                    title = "App Lock",
+                    subtitle = "Require biometrics to open the app",
+                    checked = preferences.isAppLockEnabled,
+                    onCheckedChange = { newVal -> onUpdatePreferences { it.copy(isAppLockEnabled = newVal) } }
+                )
+
                 SwitchPreference(
                     title = "Secure Mode",
                     subtitle = "Prevents screenshots and hides app in recents",
@@ -153,21 +101,17 @@ fun SettingsScreen(
             SettingsGroup(title = "About") {
                 ListItem(
                     headlineContent = { Text("Version") },
-                    supportingContent = { Text("v0.5.5") }, // Incremented for latest version
+                    supportingContent = { Text("v0.6.0") },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                 )
             }
-
             Spacer(modifier = Modifier.height(40.dp))
         }
     }
 }
 
 @Composable
-private fun SettingsGroup(
-    title: String,
-    content: @Composable () -> Unit
-) {
+private fun SettingsGroup(title: String, content: @Composable () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = title,
@@ -188,18 +132,11 @@ private fun SettingsGroup(
 }
 
 @Composable
-private fun SwitchPreference(
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
+private fun SwitchPreference(title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     ListItem(
         headlineContent = { Text(title) },
         supportingContent = { Text(subtitle) },
-        trailingContent = {
-            Switch(checked = checked, onCheckedChange = onCheckedChange)
-        },
+        trailingContent = { Switch(checked = checked, onCheckedChange = onCheckedChange) },
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         modifier = Modifier.clickable { onCheckedChange(!checked) }
     )
@@ -240,24 +177,13 @@ private fun <T> ListPreference(
                                 }
                                 .padding(vertical = 12.dp, horizontal = 8.dp)
                         ) {
-                            RadioButton(
-                                selected = value == selectedValue,
-                                onClick = null
-                            )
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(start = 16.dp)
-                            )
+                            RadioButton(selected = (value == selectedValue), onClick = null)
+                            Text(text = label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = 16.dp))
                         }
                     }
                 }
             },
-            confirmButton = {
-                TextButton(onClick = { showDialog = false }) {
-                    Text("Cancel")
-                }
-            }
+            confirmButton = { TextButton(onClick = { showDialog = false }) { Text("Cancel") } }
         )
     }
 }
