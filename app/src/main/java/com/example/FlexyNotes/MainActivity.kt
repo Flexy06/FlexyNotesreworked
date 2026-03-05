@@ -13,6 +13,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -26,6 +28,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -49,12 +52,13 @@ import com.example.FlexyNotes.ui.screens.NoteEditorScreen
 import com.example.FlexyNotes.ui.screens.NotesListScreen
 import com.example.FlexyNotes.ui.screens.SettingsScreen
 import com.example.FlexyNotes.ui.screens.TrashScreen
-import com.example.FlexyNotes.ui.theme.FlexyNotesreworkedTheme
+import com.example.FlexyNotes.ui.theme.FlexyNotesTheme
 import com.example.FlexyNotes.viewmodel.MainViewModel
 import com.example.FlexyNotes.viewmodel.NotesViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 
 @AndroidEntryPoint
 class MainActivity : FragmentActivity() {
@@ -126,7 +130,7 @@ class MainActivity : FragmentActivity() {
                 }
             }
 
-            FlexyNotesreworkedTheme(
+            FlexyNotesTheme(
                 darkTheme = isDarkTheme,
                 dynamicColor = preferences.useDynamicColor,
                 isOledMode = preferences.isOledMode
@@ -211,6 +215,10 @@ fun FlexyNotesNavigation(
     var isGridView by rememberSaveable { mutableStateOf(true) }
     val gesturesEnabled = !currentFullRoute.startsWith("note_editor")
 
+    // Track swipe edge passively to preserve NavHost interactive animations
+    // 0 = EDGE_LEFT, 1 = EDGE_RIGHT
+    var lastBackEdge by remember { mutableIntStateOf(0) }
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         gesturesEnabled = gesturesEnabled,
@@ -294,7 +302,19 @@ fun FlexyNotesNavigation(
                 Spacer(Modifier.height(16.dp))
             }
         },
-        modifier = Modifier.systemBarsPadding()
+        modifier = Modifier
+            .systemBarsPadding()
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    if (down.position.x < size.width * 0.15f) {
+                        lastBackEdge = 0
+                    }
+                    else if (down.position.x > size.width * 0.85f) {
+                        lastBackEdge = 1
+                    }
+                }
+            }
     ) {
         NavHost(
             navController = navController,
@@ -371,8 +391,13 @@ fun FlexyNotesNavigation(
                     scaleIn(initialScale = 0.9f, animationSpec = tween(350))
                 },
                 popExitTransition = {
-                    // Restored slide to right animation with scaling
-                    slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(350)) +
+                    val slideDirection = if (lastBackEdge == 0) {
+                        AnimatedContentTransitionScope.SlideDirection.Right
+                    } else {
+                        AnimatedContentTransitionScope.SlideDirection.Left
+                    }
+
+                    slideOutOfContainer(slideDirection, animationSpec = tween(350)) +
                             scaleOut(targetScale = 0.65f, animationSpec = tween(350))
                 }
             ) { backStackEntry ->
