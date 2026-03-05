@@ -3,8 +3,11 @@ package com.example.FlexyNotes
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.SystemBarStyle
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.animation.AnimatedContentTransitionScope
@@ -33,8 +36,8 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.os.LocaleListCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -46,6 +49,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
+import com.example.FlexyNotes.data.AppLanguage
 import com.example.FlexyNotes.data.ThemeMode
 import com.example.FlexyNotes.data.UserPreferences
 import com.example.FlexyNotes.ui.screens.ArchiveScreen
@@ -62,9 +66,13 @@ import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 
 @AndroidEntryPoint
-class MainActivity : FragmentActivity() {
+class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
+
+        // FIX: Wir zwingen die Activity programmatisch auf ein AppCompat-Theme.
+        // Das umgeht alle Probleme mit der AndroidManifest.xml und behebt den Crash sofort.
+        setTheme(androidx.appcompat.R.style.Theme_AppCompat_DayNight_NoActionBar)
 
         super.onCreate(savedInstanceState)
 
@@ -84,6 +92,24 @@ class MainActivity : FragmentActivity() {
                 if (!isDataStoreLoaded) {
                     delay(100)
                     isDataStoreLoaded = true
+                }
+            }
+
+            // --- Sprach-Logik über AppCompatDelegate ---
+            LaunchedEffect(preferences.language) {
+                val localeTag = when (preferences.language) {
+                    AppLanguage.ENGLISH -> "en"
+                    AppLanguage.GERMAN -> "de"
+                    AppLanguage.FRENCH -> "fr"
+                    AppLanguage.SYSTEM -> ""
+                }
+                val appLocale = if (localeTag.isEmpty()) {
+                    LocaleListCompat.getEmptyLocaleList()
+                } else {
+                    LocaleListCompat.forLanguageTags(localeTag)
+                }
+                if (AppCompatDelegate.getApplicationLocales() != appLocale) {
+                    AppCompatDelegate.setApplicationLocales(appLocale)
                 }
             }
 
@@ -219,6 +245,19 @@ fun FlexyNotesNavigation(
     // Track swipe edge passively to preserve NavHost interactive animations
     // 0 = EDGE_LEFT, 1 = EDGE_RIGHT
     var lastBackEdge by remember { mutableIntStateOf(0) }
+
+    if (currentFullRoute.startsWith("note_editor")) {
+        PredictiveBackHandler { progress ->
+            try {
+                progress.collect { backEvent ->
+                    lastBackEdge = backEvent.swipeEdge
+                }
+                navController.popBackStack()
+            } catch (e: CancellationException) {
+                // Cancelled
+            }
+        }
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,

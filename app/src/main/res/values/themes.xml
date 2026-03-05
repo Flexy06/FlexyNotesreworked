@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Offizieller Splash Screen für den Light Mode -->
     <style name="Theme.App.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">#F3F4F9</item>
         <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
-        <item name="postSplashScreenTheme">@style/Theme.FlexyNotesreworked</item>
+        <!-- Points to the main app theme below -->
+        <item name="postSplashScreenTheme">@style/Theme.FlexyNotes</item>
     </style>
 
-    <style name="Theme.FlexyNotesreworked" parent="android:Theme.Material.Light.NoActionBar">
+    <!-- CRITICAL: Must be Theme.AppCompat for AppCompatActivity to work -->
+    <style name="Theme.FlexyNotes" parent="Theme.AppCompat.Light.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
