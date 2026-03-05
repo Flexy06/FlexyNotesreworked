@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FlexyNotes</string>
+
+    <!-- Navigation Drawer -->
+    <string name="nav_notes">Notizen</string>
+    <string name="nav_archive">Archiv</string>
+    <string name="nav_trash">Papierkorb</string>
+    <string name="nav_settings">Einstellungen</string>
+
+    <!-- App Lock / Biometrics -->
+    <string name="lock_title">FlexyNotes gesperrt</string>
+    <string name="lock_subtitle">Nutze Biometrie, um deine Notizen zu öffnen</string>
+    <string name="unlock_button">Entsperren</string>
+
+    <!-- General / Shared -->
+    <string name="cancel">Abbrechen</string>
+    <string name="confirm">Bestätigen</string>
+    <string name="save">Speichern</string>
+    <string name="next">Weiter</string>
+    <string name="delete">Löschen</string>
+    <string name="empty">Leeren</string>
+    <string name="untitled">Unbenannt</string>
+    <string name="selected_count">%d ausgewählt</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">Einstellungen</string>
+    <string name="settings_appearance">Erscheinungsbild</string>
+    <string name="settings_language">Sprache</string>
+    <string name="settings_language_system">Systemstandard</string>
+    <string name="settings_theme">Design</string>
+    <string name="settings_theme_light">Hell</string>
+    <string name="settings_theme_dark">Dunkel</string>
+    <string name="settings_dynamic_colors">Dynamische Farben</string>
+    <string name="settings_dynamic_colors_desc">Passt App-Farben an dein Hintergrundbild an</string>
+    <string name="settings_oled">Reines Schwarz (OLED)</string>
+    <string name="settings_oled_desc">Spart Akku auf OLED-Displays</string>
+
+    <string name="settings_behavior">Verhalten</string>
+    <string name="settings_sort">Standard-Sortierung</string>
+    <string name="settings_sort_edited">Zuletzt bearbeitet</string>
+    <string name="settings_sort_created">Erstellungsdatum</string>
+    <string name="settings_sort_alpha">Alphabetisch (A-Z)</string>
+    <string name="settings_timestamps">Zeitstempel anzeigen</string>
+    <string name="settings_timestamps_desc">Zeigt das Datum in der Notizliste an</string>
+    <string name="settings_haptics">Haptisches Feedback</string>
+    <string name="settings_haptics_desc">Vibrieren bei Wischgesten und Aktionen</string>
+
+    <string name="settings_privacy">Datenschutz</string>
+    <string name="settings_app_lock">App-Sperre</string>
+    <string name="settings_app_lock_desc">Erfordert Biometrie zum Öffnen der App</string>
+    <string name="settings_secure_mode">Sicherer Modus</string>
+    <string name="settings_secure_mode_desc">Verhindert Screenshots &amp; versteckt App in Letzte Apps</string>
+    <string name="settings_about">Über</string>
+    <string name="settings_version">Version</string>
+
+    <!-- Notes List Screen -->
+    <string name="notes_empty">Keine aktiven Notizen. Erstelle deine erste!</string>
+    <string name="search_notes">Notizen durchsuchen...</string>
+    <string name="no_search_results">Keine Notizen gefunden für \"%s\"</string>
+    <string name="text_note">Textnotiz</string>
+    <string name="checklist">Checkliste</string>
+
+    <!-- Note Editor Screen -->
+    <string name="title_hint">Titel</string>
+    <string name="note_hint">Notiz</string>
+    <string name="add_item">Element hinzufügen</string>
+    <string name="reminder">Erinnerung: %s</string>
+    <string name="created">Erstellt: %s</string>
+    <string name="edited">Bearbeitet: %s</string>
+    <string name="share_via">Notiz teilen über...</string>
+
+    <!-- Archive Screen -->
+    <string name="archive_empty">Dein Archiv ist leer.</string>
+
+    <!-- Trash Screen -->
+    <string name="trash_empty">Der Papierkorb ist leer.</string>
+    <string name="empty_trash">Papierkorb leeren</string>
+    <string name="empty_trash_desc">Bist du sicher, dass du alle Notizen im Papierkorb dauerhaft löschen möchtest? Dies kann nicht rückgängig gemacht werden.</string>
+    <string name="delete_permanently">Dauerhaft löschen</string>
+    <string name="delete_permanently_desc">Bist du sicher, dass du die markierte(n) Notiz(en) dauerhaft löschen möchtest? Dies kann nicht rückgängig gemacht werden.</string>
+</resources>

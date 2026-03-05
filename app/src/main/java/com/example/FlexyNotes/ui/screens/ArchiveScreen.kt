@@ -27,8 +27,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.example.FlexyNotes.R
 import com.example.FlexyNotes.viewmodel.NotesViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -54,7 +56,7 @@ fun ArchiveScreen(
         topBar = {
             if (selectedNoteIds.isNotEmpty()) {
                 TopAppBar(
-                    title = { Text("${selectedNoteIds.size} selected") },
+                    title = { Text(stringResource(R.string.selected_count, selectedNoteIds.size)) },
                     navigationIcon = {
                         IconButton(onClick = { selectedNoteIds = emptySet() }) {
                             Icon(Icons.Default.Close, contentDescription = "Clear selection")
@@ -79,7 +81,7 @@ fun ArchiveScreen(
                 )
             } else {
                 TopAppBar(
-                    title = { Text("Archive") },
+                    title = { Text(stringResource(R.string.nav_archive)) },
                     navigationIcon = {
                         IconButton(onClick = onOpenDrawer) {
                             Icon(Icons.Default.Menu, contentDescription = "Open menu")
@@ -94,7 +96,7 @@ fun ArchiveScreen(
                 modifier = Modifier.fillMaxSize().padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Your archive is empty.")
+                Text(stringResource(R.string.archive_empty))
             }
         } else {
             LazyVerticalStaggeredGrid(
@@ -117,7 +119,6 @@ fun ArchiveScreen(
                         positionalThreshold = { totalDistance -> totalDistance * 0.4f }
                     )
 
-                    // Realtime haptic feedback
                     var previousTarget by remember { mutableStateOf(SwipeToDismissBoxValue.Settled) }
                     LaunchedEffect(dismissState) {
                         snapshotFlow { dismissState.targetValue }.collect { currentTarget ->
@@ -132,7 +133,6 @@ fun ArchiveScreen(
                         }
                     }
 
-                    // Physical resistance logic
                     val rawOffset = try { dismissState.requireOffset() } catch(_: Exception) { 0f }
                     val isPastThreshold = dismissState.targetValue != SwipeToDismissBoxValue.Settled
                     val targetResistance = if (!isPastThreshold && rawOffset != 0f) -rawOffset * 0.4f else 0f
@@ -184,7 +184,7 @@ fun ArchiveScreen(
                                 colors = CardDefaults.cardColors(containerColor = if (isSelected) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface)
                             ) {
                                 Column(modifier = Modifier.padding(16.dp)) {
-                                    Text(text = note.title.ifEmpty { "Untitled" }, style = MaterialTheme.typography.titleMedium)
+                                    Text(text = note.title.ifEmpty { stringResource(R.string.untitled) }, style = MaterialTheme.typography.titleMedium)
                                     if (note.content.isNotBlank()) {
                                         Spacer(modifier = Modifier.height(4.dp))
                                         val displayContent = if (note.isChecklist) note.content.replace("[ ] ", "☐ ").replace("[x] ", "☑ ") else note.content

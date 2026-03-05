@@ -2,10 +2,7 @@ package com.example.FlexyNotes.data
 
 import android.content.Context
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -28,6 +25,7 @@ class UserPreferencesRepository @Inject constructor(
         val USE_HAPTICS = booleanPreferencesKey("use_haptics")
         val IS_SECURE_MODE = booleanPreferencesKey("is_secure_mode")
         val IS_APP_LOCK_ENABLED = booleanPreferencesKey("is_app_lock_enabled")
+        val LANGUAGE = stringPreferencesKey("language")
     }
 
     val userPreferencesFlow: Flow<UserPreferences> = context.dataStore.data
@@ -40,7 +38,8 @@ class UserPreferencesRepository @Inject constructor(
                 showTimestamp = preferences[SHOW_TIMESTAMP] ?: false,
                 useHaptics = preferences[USE_HAPTICS] ?: true,
                 isSecureMode = preferences[IS_SECURE_MODE] ?: false,
-                isAppLockEnabled = preferences[IS_APP_LOCK_ENABLED] ?: false
+                isAppLockEnabled = preferences[IS_APP_LOCK_ENABLED] ?: false,
+                language = AppLanguage.valueOf(preferences[LANGUAGE] ?: AppLanguage.SYSTEM.name)
             )
         }
 
@@ -54,7 +53,8 @@ class UserPreferencesRepository @Inject constructor(
                 showTimestamp = preferences[SHOW_TIMESTAMP] ?: false,
                 useHaptics = preferences[USE_HAPTICS] ?: true,
                 isSecureMode = preferences[IS_SECURE_MODE] ?: false,
-                isAppLockEnabled = preferences[IS_APP_LOCK_ENABLED] ?: false
+                isAppLockEnabled = preferences[IS_APP_LOCK_ENABLED] ?: false,
+                language = AppLanguage.valueOf(preferences[LANGUAGE] ?: AppLanguage.SYSTEM.name)
             )
             val updated = update(current)
 
@@ -66,6 +66,7 @@ class UserPreferencesRepository @Inject constructor(
             preferences[USE_HAPTICS] = updated.useHaptics
             preferences[IS_SECURE_MODE] = updated.isSecureMode
             preferences[IS_APP_LOCK_ENABLED] = updated.isAppLockEnabled
+            preferences[LANGUAGE] = updated.language.name
         }
     }
 }

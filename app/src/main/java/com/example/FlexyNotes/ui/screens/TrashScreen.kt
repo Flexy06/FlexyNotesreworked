@@ -24,7 +24,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.example.FlexyNotes.R
 import com.example.FlexyNotes.data.NoteEntity
 import com.example.FlexyNotes.viewmodel.NotesViewModel
 
@@ -54,19 +56,19 @@ fun TrashScreen(
     if (showEmptyTrashDialog) {
         AlertDialog(
             onDismissRequest = { showEmptyTrashDialog = false },
-            title = { Text("Empty Trash") },
-            text = { Text("Are you sure you want to permanently delete all notes in the trash? This action cannot be undone.") },
+            title = { Text(stringResource(R.string.empty_trash)) },
+            text = { Text(stringResource(R.string.empty_trash_desc)) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.clearTrash()
                     showEmptyTrashDialog = false
                     selectedNoteIds = emptySet()
                 }) {
-                    Text("Empty", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.empty), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showEmptyTrashDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showEmptyTrashDialog = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -78,8 +80,8 @@ fun TrashScreen(
                 showDeleteSelectedDialog = false
                 noteToDelete = null
             },
-            title = { Text("Delete Permanently") },
-            text = { Text("Are you sure you want to permanently delete the selected note(s)? This action cannot be undone.") },
+            title = { Text(stringResource(R.string.delete_permanently)) },
+            text = { Text(stringResource(R.string.delete_permanently_desc)) },
             confirmButton = {
                 TextButton(onClick = {
                     if (showDeleteSelectedDialog) {
@@ -92,14 +94,14 @@ fun TrashScreen(
                         noteToDelete = null
                     }
                 }) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = {
                     showDeleteSelectedDialog = false
                     noteToDelete = null
-                }) { Text("Cancel") }
+                }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -108,7 +110,7 @@ fun TrashScreen(
         topBar = {
             if (selectedNoteIds.isNotEmpty()) {
                 TopAppBar(
-                    title = { Text("${selectedNoteIds.size} selected") },
+                    title = { Text(stringResource(R.string.selected_count, selectedNoteIds.size)) },
                     navigationIcon = {
                         IconButton(onClick = { selectedNoteIds = emptySet() }) {
                             Icon(Icons.Default.Close, contentDescription = "Clear selection")
@@ -129,7 +131,7 @@ fun TrashScreen(
                 )
             } else {
                 TopAppBar(
-                    title = { Text("Trash") },
+                    title = { Text(stringResource(R.string.nav_trash)) },
                     navigationIcon = {
                         IconButton(onClick = onOpenDrawer) {
                             Icon(Icons.Default.Menu, contentDescription = "Open menu")
@@ -138,7 +140,7 @@ fun TrashScreen(
                     actions = {
                         if (deletedNotes.isNotEmpty()) {
                             TextButton(onClick = { showEmptyTrashDialog = true }) {
-                                Text("Empty Trash")
+                                Text(stringResource(R.string.empty_trash))
                             }
                         }
                     }
@@ -153,7 +155,7 @@ fun TrashScreen(
                     .padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Trash is empty.")
+                Text(stringResource(R.string.trash_empty))
             }
         } else {
             LazyVerticalStaggeredGrid(
@@ -199,7 +201,7 @@ fun TrashScreen(
                                 .padding(16.dp)
                         ) {
                             Text(
-                                text = note.title.ifEmpty { "Untitled" },
+                                text = note.title.ifEmpty { stringResource(R.string.untitled) },
                                 style = MaterialTheme.typography.titleMedium
                             )
                             if (note.content.isNotBlank()) {
@@ -216,6 +218,20 @@ fun TrashScreen(
                                     style = MaterialTheme.typography.bodyMedium,
                                     maxLines = 5
                                 )
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End
+                            ) {
+                                IconButton(onClick = { viewModel.restoreNote(note) }) {
+                                    Icon(Icons.Default.Restore, contentDescription = "Restore")
+                                }
+                                IconButton(onClick = { noteToDelete = note }) {
+                                    Icon(Icons.Default.DeleteForever, contentDescription = "Delete permanently")
+                                }
                             }
                         }
                     }

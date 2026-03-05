@@ -2,6 +2,7 @@ package com.example.FlexyNotes.data
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 enum class SortOrder { DATE_EDITED, DATE_CREATED, ALPHABETICAL }
+enum class AppLanguage { SYSTEM, ENGLISH, GERMAN, FRENCH }
 
 data class UserPreferences(
     val isOledMode: Boolean = true,
@@ -11,5 +12,6 @@ data class UserPreferences(
     val showTimestamp: Boolean = false,
     val useHaptics: Boolean = true,
     val isSecureMode: Boolean = false,
-    val isAppLockEnabled: Boolean = false // New preference for biometric lock
+    val isAppLockEnabled: Boolean = false,
+    val language: AppLanguage = AppLanguage.SYSTEM
 )

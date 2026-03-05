@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FlexyNotes</string>
+
+    <!-- Navigation Drawer -->
+    <string name="nav_notes">Notes</string>
+    <string name="nav_archive">Archive</string>
+    <string name="nav_trash">Corbeille</string>
+    <string name="nav_settings">Paramètres</string>
+
+    <!-- App Lock / Biometrics -->
+    <string name="lock_title">FlexyNotes verrouillé</string>
+    <string name="lock_subtitle">Utilisez la biométrie pour accéder à vos notes</string>
+    <string name="unlock_button">Déverrouiller</string>
+
+    <!-- General / Shared -->
+    <string name="cancel">Annuler</string>
+    <string name="confirm">Confirmer</string>
+    <string name="save">Enregistrer</string>
+    <string name="next">Suivant</string>
+    <string name="delete">Supprimer</string>
+    <string name="empty">Vider</string>
+    <string name="untitled">Sans titre</string>
+    <string name="selected_count">%d sélectionné(s)</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">Paramètres</string>
+    <string name="settings_appearance">Apparence</string>
+    <string name="settings_language">Langue</string>
+    <string name="settings_language_system">Par défaut</string>
+    <string name="settings_theme">Thème</string>
+    <string name="settings_theme_light">Clair</string>
+    <string name="settings_theme_dark">Sombre</string>
+    <string name="settings_dynamic_colors">Couleurs dynamiques</string>
+    <string name="settings_dynamic_colors_desc">Assortit les couleurs de l\'application à votre fond d\'écran</string>
+    <string name="settings_oled">Noir pur (OLED)</string>
+    <string name="settings_oled_desc">Économise la batterie sur les écrans OLED</string>
+
+    <string name="settings_behavior">Comportement</string>
+    <string name="settings_sort">Tri par défaut</string>
+    <string name="settings_sort_edited">Dernière modification</string>
+    <string name="settings_sort_created">Date de création</string>
+    <string name="settings_sort_alpha">Alphabétique (A-Z)</string>
+    <string name="settings_timestamps">Afficher l\'horodatage</string>
+    <string name="settings_timestamps_desc">Affiche les dates sur les notes dans la liste</string>
+    <string name="settings_haptics">Retour haptique</string>
+    <string name="settings_haptics_desc">Vibrer lors des balayages et des actions</string>
+
+    <string name="settings_privacy">Confidentialité</string>
+    <string name="settings_app_lock">Verrouillage de l\'application</string>
+    <string name="settings_app_lock_desc">Nécessite la biométrie pour ouvrir l\'application</string>
+    <string name="settings_secure_mode">Mode sécurisé</string>
+    <string name="settings_secure_mode_desc">Empêche les captures d\'écran et masque l\'application dans les récents</string>
+    <string name="settings_about">À propos</string>
+    <string name="settings_version">Version</string>
+
+    <!-- Notes List Screen -->
+    <string name="notes_empty">Aucune note active. Créez votre première note !</string>
+    <string name="search_notes">Rechercher des notes...</string>
+    <string name="no_search_results">Aucune note trouvée pour \"%s\"</string>
+    <string name="text_note">Note textuelle</string>
+    <string name="checklist">Liste de contrôle</string>
+
+    <!-- Note Editor Screen -->
+    <string name="title_hint">Titre</string>
+    <string name="note_hint">Note</string>
+    <string name="add_item">Ajouter un élément</string>
+    <string name="reminder">Rappel : %s</string>
+    <string name="created">Créé le : %s</string>
+    <string name="edited">Modifié le : %s</string>
+    <string name="share_via">Partager la note via...</string>
+
+    <!-- Archive Screen -->
+    <string name="archive_empty">Votre archive est vide.</string>
+
+    <!-- Trash Screen -->
+    <string name="trash_empty">La corbeille est vide.</string>
+    <string name="empty_trash">Vider la corbeille</string>
+    <string name="empty_trash_desc">Êtes-vous sûr de vouloir supprimer définitivement toutes les notes de la corbeille ? Cette action est irréversible.</string>
+    <string name="delete_permanently">Supprimer définitivement</string>
+    <string name="delete_permanently_desc">Êtes-vous sûr de vouloir supprimer définitivement la/les note(s) sélectionnée(s) ? Cette action est irréversible.</string>
+</resources>

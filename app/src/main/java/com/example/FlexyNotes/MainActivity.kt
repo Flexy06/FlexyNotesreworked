@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -159,12 +160,12 @@ class MainActivity : FragmentActivity() {
                                     )
                                     Spacer(Modifier.height(16.dp))
                                     Text(
-                                        text = "FlexyNotes is Locked",
+                                        text = stringResource(R.string.lock_title),
                                         style = MaterialTheme.typography.headlineSmall
                                     )
                                     Spacer(Modifier.height(24.dp))
                                     Button(onClick = { showPromptTrigger = true }) {
-                                        Text("Unlock")
+                                        Text(stringResource(R.string.unlock_button))
                                     }
                                 }
                             }
@@ -190,8 +191,8 @@ class MainActivity : FragmentActivity() {
         })
 
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("FlexyNotes Locked")
-            .setSubtitle("Use biometrics to access your notes")
+            .setTitle(getString(R.string.lock_title))
+            .setSubtitle(getString(R.string.lock_subtitle))
             .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL)
             .build()
 
@@ -226,7 +227,7 @@ fun FlexyNotesNavigation(
             ModalDrawerSheet {
                 Spacer(Modifier.height(32.dp))
                 Text(
-                    text = "FlexyNotes",
+                    text = stringResource(R.string.app_name),
                     style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier.padding(16.dp)
                 )
@@ -234,7 +235,7 @@ fun FlexyNotesNavigation(
 
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Edit, contentDescription = null) },
-                    label = { Text("Notes") },
+                    label = { Text(stringResource(R.string.nav_notes)) },
                     selected = currentRoute == "notes_list",
                     onClick = {
                         scope.launch { drawerState.close() }
@@ -250,7 +251,7 @@ fun FlexyNotesNavigation(
                 )
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Archive, contentDescription = null) },
-                    label = { Text("Archive") },
+                    label = { Text(stringResource(R.string.nav_archive)) },
                     selected = currentRoute == "archive",
                     onClick = {
                         scope.launch { drawerState.close() }
@@ -266,7 +267,7 @@ fun FlexyNotesNavigation(
                 )
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Delete, contentDescription = null) },
-                    label = { Text("Trash") },
+                    label = { Text(stringResource(R.string.nav_trash)) },
                     selected = currentRoute == "trash",
                     onClick = {
                         scope.launch { drawerState.close() }
@@ -285,7 +286,7 @@ fun FlexyNotesNavigation(
 
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                    label = { Text("Settings") },
+                    label = { Text(stringResource(R.string.nav_settings)) },
                     selected = currentRoute == "settings",
                     onClick = {
                         scope.launch { drawerState.close() }
