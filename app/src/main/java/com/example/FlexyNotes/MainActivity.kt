@@ -127,7 +127,7 @@ class MainActivity : FragmentActivity() {
             }
 
             FlexyNotesreworkedTheme(
-                themeMode = preferences.themeMode,
+                darkTheme = isDarkTheme,
                 dynamicColor = preferences.useDynamicColor,
                 isOledMode = preferences.isOledMode
             ) {
@@ -360,7 +360,6 @@ fun FlexyNotesNavigation(
                     navArgument("noteId") { type = NavType.StringType; nullable = true },
                     navArgument("isChecklist") { type = NavType.BoolType; defaultValue = false }
                 ),
-                // Deep Link Configuration
                 deepLinks = listOf(navDeepLink { uriPattern = "flexynotes://note/{noteId}" }),
                 enterTransition = {
                     slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(350))
@@ -372,6 +371,7 @@ fun FlexyNotesNavigation(
                     scaleIn(initialScale = 0.9f, animationSpec = tween(350))
                 },
                 popExitTransition = {
+                    // Restored slide to right animation with scaling
                     slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(350)) +
                             scaleOut(targetScale = 0.65f, animationSpec = tween(350))
                 }
