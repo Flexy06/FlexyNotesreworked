@@ -148,6 +148,7 @@ fun FlexyNotesNavigation(
     val currentRoute = currentFullRoute.substringBefore("/")
 
     var lastBackEdge by remember { mutableIntStateOf(0) }
+    var isGridView by rememberSaveable { mutableStateOf(true) }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -227,9 +228,9 @@ fun FlexyNotesNavigation(
             composable("notes_list") {
                 NotesListScreen(
                     viewModel = hiltViewModel(),
-                    isGridView = true,
+                    isGridView = isGridView,
                     useHaptics = preferences.useHaptics,
-                    onGridViewToggle = {},
+                    onGridViewToggle = { isGridView = !isGridView },
                     onNavigateToEditor = { id, isCheck -> navController.navigate("note_editor/$id?isChecklist=$isCheck") },
                     onOpenDrawer = { scope.launch { drawerState.open() } }
                 )
@@ -237,7 +238,7 @@ fun FlexyNotesNavigation(
             composable("archive") {
                 ArchiveScreen(
                     viewModel = hiltViewModel(),
-                    isGridView = true,
+                    isGridView = isGridView,
                     useHaptics = preferences.useHaptics,
                     onOpenDrawer = { scope.launch { drawerState.open() } },
                     onNavigateToEditor = { id -> navController.navigate("note_editor/$id?isChecklist=false") }
@@ -246,7 +247,7 @@ fun FlexyNotesNavigation(
             composable("trash") {
                 TrashScreen(
                     viewModel = hiltViewModel(),
-                    isGridView = true,
+                    isGridView = isGridView,
                     useHaptics = preferences.useHaptics,
                     onOpenDrawer = { scope.launch { drawerState.open() } }
                 )
