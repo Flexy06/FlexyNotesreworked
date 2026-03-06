@@ -5,7 +5,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.SystemBarStyle
-import androidx.activity.compose.PredictiveBackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -299,18 +298,7 @@ fun FlexyNotesNavigation(
     // 0 = EDGE_LEFT, 1 = EDGE_RIGHT
     var lastBackEdge by remember { mutableIntStateOf(0) }
 
-    if (currentFullRoute.startsWith("note_editor")) {
-        PredictiveBackHandler { progress ->
-            try {
-                progress.collect { backEvent ->
-                    lastBackEdge = backEvent.swipeEdge
-                }
-                navController.popBackStack()
-            } catch (e: CancellationException) {
-                // Cancelled
-            }
-        }
-    }
+
 
     ModalNavigationDrawer(
         drawerState = drawerState,
