@@ -12,19 +12,20 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        // This MUST be unique in the Play Store
         applicationId = "com.flexynotes.app"
         minSdk = 29
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+
+        // INCREMENTED: version code must be higher for every new upload to Play Console
+        versionCode = 2
+        versionName = "1.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true // Enabled for Play Store release
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

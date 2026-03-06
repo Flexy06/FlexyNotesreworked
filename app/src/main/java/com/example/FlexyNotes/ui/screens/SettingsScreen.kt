@@ -175,7 +175,7 @@ fun SettingsScreen(
                         val log = CrashReporter.getCrashLog(context)
                         if (log != null) {
                             val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
-                                data = Uri.parse("mailto:deine.email@beispiel.de") // TODO: Change to your email
+                                data = Uri.parse("mailto:Flexy06developer@proton.me") // TODO: Change to your email
                                 putExtra(Intent.EXTRA_SUBJECT, "FlexyNotes Manual Crash Report")
                                 putExtra(Intent.EXTRA_TEXT, "Device: ${android.os.Build.MODEL}\nAndroid: ${android.os.Build.VERSION.RELEASE}\n\nCrash Log:\n\n$log")
                             }
@@ -202,7 +202,7 @@ fun SettingsScreen(
             SettingsGroup(title = stringResource(R.string.settings_about)) {
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.settings_version)) },
-                    supportingContent = { Text("v0.10.3") },
+                    supportingContent = { Text("v1.0.2") },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                 )
             }

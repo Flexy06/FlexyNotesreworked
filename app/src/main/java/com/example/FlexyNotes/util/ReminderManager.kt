@@ -18,7 +18,6 @@ class ReminderManager @Inject constructor(
     fun scheduleReminder(noteId: Long, title: String, content: String, timeInMillis: Long) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-        // Added explicit action to ensure the intent is not dropped
         val intent = Intent(context, ReminderReceiver::class.java).apply {
             action = "com.example.FlexyNotes.REMINDER"
             putExtra("NOTE_ID", noteId)
@@ -34,34 +33,36 @@ class ReminderManager @Inject constructor(
         )
 
         try {
+            // Android 12 (API 31) and above requires special handling for exact alarms
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 if (alarmManager.canScheduleExactAlarms()) {
+                    // We use exact if permitted
                     alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, timeInMillis, pendingIntent)
                 } else {
+                    // Fallback to inexact (battery-friendly) if not permitted.
+                    // This satisfies Google Play policies.
                     alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, timeInMillis, pendingIntent)
                 }
             } else {
+                // Older versions don't have these strict restrictions
                 alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, timeInMillis, pendingIntent)
             }
 
-            // DEBUGGING: Visual feedback to verify calculated time
             val diffMinutes = (timeInMillis - System.currentTimeMillis()) / 60000
-            if (diffMinutes < 0) {
-                Toast.makeText(context, "Reminder set in the past! Will trigger immediately.", Toast.LENGTH_LONG).show()
-            } else {
-                Toast.makeText(context, "Reminder set in approx. $diffMinutes minute(s).", Toast.LENGTH_SHORT).show()
+            if (diffMinutes >= 0) {
+                Toast.makeText(context, "Reminder set for $diffMinutes min.", Toast.LENGTH_SHORT).show()
             }
 
-        } catch (e: SecurityException) {
+        } catch (e: Exception) {
+            // Ultimate fallback for any security or policy exceptions
             alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, timeInMillis, pendingIntent)
-            Toast.makeText(context, "Exact alarm permission missing, falling back to inexact.", Toast.LENGTH_SHORT).show()
         }
     }
 
     fun cancelReminder(noteId: Long) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, ReminderReceiver::class.java).apply {
-            action = "com.example.FlexyNotes.REMINDER"
+            action = "com.flexynotes.REMINDER"
         }
         val pendingIntent = PendingIntent.getBroadcast(
             context,
