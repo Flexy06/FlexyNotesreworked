@@ -7,11 +7,13 @@ plugins {
 }
 
 android {
-    namespace = "com.example.FlexyNotes"
+    // Changed from com.example.FlexyNotes
+    namespace = "com.flexynotes.app"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.FlexyNotes"
+        // This MUST be unique in the Play Store
+        applicationId = "com.flexynotes.app"
         minSdk = 29
         targetSdk = 35
         versionCode = 1
@@ -67,8 +69,9 @@ dependencies {
     // DataStore (Preferences)
     implementation(libs.androidx.datastore.preferences)
 
-    // Biometric
+    // Biometric & AppCompat (Required for BiometricPrompt)
     implementation(libs.androidx.biometric)
+    implementation("androidx.appcompat:appcompat:1.7.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -84,9 +87,7 @@ dependencies {
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
 
-    implementation("androidx.appcompat:appcompat:1.7.0")
-    implementation("androidx.biometric:biometric:1.2.0-alpha05")
-    implementation("androidx.compose.material:material-icons-extended")
-
     implementation(libs.androidx.core.splashscreen)
+
+    implementation("androidx.compose.material:material-icons-extended")
 }

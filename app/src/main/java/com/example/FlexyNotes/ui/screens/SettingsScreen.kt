@@ -1,4 +1,4 @@
-package com.example.FlexyNotes.ui.screens
+package com.flexynotes.ui.screens
 
 import android.content.Intent
 import android.net.Uri
@@ -19,12 +19,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.example.FlexyNotes.R
-import com.example.FlexyNotes.data.AppLanguage
-import com.example.FlexyNotes.data.SortOrder
-import com.example.FlexyNotes.data.ThemeMode
-import com.example.FlexyNotes.data.UserPreferences
-import com.example.FlexyNotes.util.CrashReporter
+import com.flexynotes.app.R
+import com.flexynotes.data.AppLanguage
+import com.flexynotes.data.SortOrder
+import com.flexynotes.data.ThemeMode
+import com.flexynotes.data.UserPreferences
+import com.flexynotes.util.CrashReporter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -202,7 +202,7 @@ fun SettingsScreen(
             SettingsGroup(title = stringResource(R.string.settings_about)) {
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.settings_version)) },
-                    supportingContent = { Text("v0.8.5") },
+                    supportingContent = { Text("v0.10.3") },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                 )
             }

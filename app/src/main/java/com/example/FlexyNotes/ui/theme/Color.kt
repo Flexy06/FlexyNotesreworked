@@ -1,4 +1,4 @@
-package com.example.FlexyNotes.ui.theme
+package com.flexynotes.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

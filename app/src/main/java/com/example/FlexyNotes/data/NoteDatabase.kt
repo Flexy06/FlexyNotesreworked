@@ -1,4 +1,4 @@
-package com.example.FlexyNotes.data
+package com.flexynotes.data
 
 import android.content.Context
 import androidx.room.Database

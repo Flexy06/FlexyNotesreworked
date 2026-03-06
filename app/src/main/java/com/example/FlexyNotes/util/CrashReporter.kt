@@ -1,4 +1,4 @@
-package com.example.FlexyNotes.util
+package com.flexynotes.util
 
 import android.content.Context
 import java.io.File

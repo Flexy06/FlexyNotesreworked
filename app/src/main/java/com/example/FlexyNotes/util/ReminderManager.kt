@@ -1,4 +1,4 @@
-package com.example.FlexyNotes.util
+package com.flexynotes.util
 
 import android.app.AlarmManager
 import android.app.PendingIntent
@@ -6,7 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.widget.Toast
-import com.example.FlexyNotes.receiver.ReminderReceiver
+import com.flexynotes.receiver.ReminderReceiver
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton

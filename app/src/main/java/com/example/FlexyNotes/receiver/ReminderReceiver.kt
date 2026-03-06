@@ -1,4 +1,4 @@
-package com.example.FlexyNotes.receiver
+package com.flexynotes.receiver
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -10,7 +10,8 @@ import android.net.Uri
 import android.os.Build
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
-import com.example.FlexyNotes.MainActivity
+import com.flexynotes.app.MainActivity
+
 
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {

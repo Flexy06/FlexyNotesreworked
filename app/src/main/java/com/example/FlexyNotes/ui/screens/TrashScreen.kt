@@ -1,4 +1,4 @@
-package com.example.FlexyNotes.ui.screens
+package com.flexynotes.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
@@ -26,9 +26,9 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.example.FlexyNotes.R
-import com.example.FlexyNotes.data.NoteEntity
-import com.example.FlexyNotes.viewmodel.NotesViewModel
+import com.flexynotes.app.R
+import com.flexynotes.data.NoteEntity
+import com.flexynotes.viewmodel.NotesViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable

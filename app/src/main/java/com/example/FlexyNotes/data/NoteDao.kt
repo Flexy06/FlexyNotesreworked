@@ -1,4 +1,4 @@
-package com.example.FlexyNotes.data
+package com.flexynotes.data
 
 import androidx.room.Dao
 import androidx.room.Delete

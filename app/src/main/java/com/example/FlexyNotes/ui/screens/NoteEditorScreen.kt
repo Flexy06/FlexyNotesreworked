@@ -1,4 +1,4 @@
-package com.example.FlexyNotes.ui.screens
+package com.flexynotes.ui.screens
 
 import android.Manifest
 import android.content.Intent
@@ -72,9 +72,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import com.example.FlexyNotes.R
-import com.example.FlexyNotes.data.NoteEntity
-import com.example.FlexyNotes.viewmodel.NotesViewModel
+import com.flexynotes.app.R
+import com.flexynotes.data.NoteEntity
+import com.flexynotes.viewmodel.NotesViewModel
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Calendar

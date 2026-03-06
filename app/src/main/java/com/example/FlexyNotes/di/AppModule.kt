@@ -1,8 +1,8 @@
-package com.example.FlexyNotes.di
+package com.flexynotes.di
 
 import android.content.Context
-import com.example.FlexyNotes.data.NoteDao
-import com.example.FlexyNotes.data.NoteDatabase
+import com.flexynotes.data.NoteDao
+import com.flexynotes.data.NoteDatabase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

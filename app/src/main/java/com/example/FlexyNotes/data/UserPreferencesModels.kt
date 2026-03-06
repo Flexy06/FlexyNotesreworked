@@ -1,4 +1,4 @@
-package com.example.FlexyNotes.data
+package com.flexynotes.data
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 enum class SortOrder { DATE_EDITED, DATE_CREATED, ALPHABETICAL }

@@ -1,4 +1,4 @@
-package com.example.FlexyNotes.ui.screens
+package com.flexynotes.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
@@ -30,8 +30,8 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import com.example.FlexyNotes.R
-import com.example.FlexyNotes.viewmodel.NotesViewModel
+import com.flexynotes.app.R
+import com.flexynotes.viewmodel.NotesViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable

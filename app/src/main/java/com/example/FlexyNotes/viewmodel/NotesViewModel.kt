@@ -1,10 +1,10 @@
-package com.example.FlexyNotes.viewmodel
+package com.flexynotes.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.FlexyNotes.data.NoteEntity
-import com.example.FlexyNotes.repository.NoteRepository
-import com.example.FlexyNotes.util.ReminderManager
+import com.flexynotes.data.NoteEntity
+import com.flexynotes.repository.NoteRepository
+import com.flexynotes.util.ReminderManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

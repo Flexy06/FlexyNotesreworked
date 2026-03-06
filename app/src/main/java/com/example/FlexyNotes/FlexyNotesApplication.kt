@@ -1,10 +1,9 @@
-package com.example.FlexyNotes
+package com.flexynotes.app
 
 import android.app.Application
-import com.example.FlexyNotes.util.CrashReporter
+import com.flexynotes.util.CrashReporter
 import dagger.hilt.android.HiltAndroidApp
 
-// Triggers Hilt's code generation, including a base class for your application
 @HiltAndroidApp
 class FlexyNotesApplication : Application() {
 
