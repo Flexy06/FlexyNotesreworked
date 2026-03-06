@@ -26,35 +26,38 @@ class UserPreferencesRepository @Inject constructor(
         val IS_SECURE_MODE = booleanPreferencesKey("is_secure_mode")
         val IS_APP_LOCK_ENABLED = booleanPreferencesKey("is_app_lock_enabled")
         val LANGUAGE = stringPreferencesKey("language")
+        val ASK_FOR_CRASH_REPORTS = booleanPreferencesKey("ask_for_crash_reports")
     }
 
     val userPreferencesFlow: Flow<UserPreferences> = context.dataStore.data
         .map { preferences ->
             UserPreferences(
-                isOledMode = preferences[IS_OLED_MODE] ?: true,
+                isOledMode = preferences[IS_OLED_MODE] ?: false,
                 themeMode = ThemeMode.valueOf(preferences[THEME_MODE] ?: ThemeMode.SYSTEM.name),
                 useDynamicColor = preferences[USE_DYNAMIC_COLOR] ?: true,
                 sortOrder = SortOrder.valueOf(preferences[SORT_ORDER] ?: SortOrder.DATE_EDITED.name),
-                showTimestamp = preferences[SHOW_TIMESTAMP] ?: false,
+                showTimestamp = preferences[SHOW_TIMESTAMP] ?: true,
                 useHaptics = preferences[USE_HAPTICS] ?: true,
                 isSecureMode = preferences[IS_SECURE_MODE] ?: false,
                 isAppLockEnabled = preferences[IS_APP_LOCK_ENABLED] ?: false,
-                language = AppLanguage.valueOf(preferences[LANGUAGE] ?: AppLanguage.SYSTEM.name)
+                language = AppLanguage.valueOf(preferences[LANGUAGE] ?: AppLanguage.SYSTEM.name),
+                askForCrashReports = preferences[ASK_FOR_CRASH_REPORTS] ?: true
             )
         }
 
     suspend fun updatePreferences(update: (UserPreferences) -> UserPreferences) {
         context.dataStore.edit { preferences ->
             val current = UserPreferences(
-                isOledMode = preferences[IS_OLED_MODE] ?: true,
+                isOledMode = preferences[IS_OLED_MODE] ?: false,
                 themeMode = ThemeMode.valueOf(preferences[THEME_MODE] ?: ThemeMode.SYSTEM.name),
                 useDynamicColor = preferences[USE_DYNAMIC_COLOR] ?: true,
                 sortOrder = SortOrder.valueOf(preferences[SORT_ORDER] ?: SortOrder.DATE_EDITED.name),
-                showTimestamp = preferences[SHOW_TIMESTAMP] ?: false,
+                showTimestamp = preferences[SHOW_TIMESTAMP] ?: true,
                 useHaptics = preferences[USE_HAPTICS] ?: true,
                 isSecureMode = preferences[IS_SECURE_MODE] ?: false,
                 isAppLockEnabled = preferences[IS_APP_LOCK_ENABLED] ?: false,
-                language = AppLanguage.valueOf(preferences[LANGUAGE] ?: AppLanguage.SYSTEM.name)
+                language = AppLanguage.valueOf(preferences[LANGUAGE] ?: AppLanguage.SYSTEM.name),
+                askForCrashReports = preferences[ASK_FOR_CRASH_REPORTS] ?: true
             )
             val updated = update(current)
 
@@ -67,6 +70,7 @@ class UserPreferencesRepository @Inject constructor(
             preferences[IS_SECURE_MODE] = updated.isSecureMode
             preferences[IS_APP_LOCK_ENABLED] = updated.isAppLockEnabled
             preferences[LANGUAGE] = updated.language.name
+            preferences[ASK_FOR_CRASH_REPORTS] = updated.askForCrashReports
         }
     }
 }

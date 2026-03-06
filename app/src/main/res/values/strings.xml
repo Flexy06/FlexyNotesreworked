@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">FlexyNotes</string>
 
@@ -53,6 +52,15 @@
     <string name="settings_secure_mode_desc">Prevents screenshots and hides app in recents</string>
     <string name="settings_about">About</string>
     <string name="settings_version">Version</string>
+
+    <!-- Crash Reporting Settings -->
+    <string name="settings_advanced" translatable="false">Advanced</string>
+    <string name="settings_ask_crash_reports" translatable="false">Ask for Crash Reports</string>
+    <string name="settings_ask_crash_reports_desc" translatable="false">Prompt to send a bug report after an unexpected crash</string>
+    <string name="settings_send_last_crash" translatable="false">Send Last Crash Report</string>
+    <string name="settings_send_last_crash_desc" translatable="false">Manually send the last recorded crash log</string>
+    <string name="settings_crash_app" translatable="false">Crash App (Debug)</string>
+    <string name="settings_crash_app_desc" translatable="false">Force a crash to test the reporting system</string>
 
     <!-- Notes List Screen -->
     <string name="notes_empty">No active notes. Create your first one!</string>

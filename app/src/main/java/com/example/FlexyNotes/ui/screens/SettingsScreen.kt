@@ -1,5 +1,8 @@
 package com.example.FlexyNotes.ui.screens
 
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -13,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.FlexyNotes.R
@@ -20,15 +24,18 @@ import com.example.FlexyNotes.data.AppLanguage
 import com.example.FlexyNotes.data.SortOrder
 import com.example.FlexyNotes.data.ThemeMode
 import com.example.FlexyNotes.data.UserPreferences
+import com.example.FlexyNotes.util.CrashReporter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     preferences: UserPreferences,
     onUpdatePreferences: ((UserPreferences) -> UserPreferences) -> Unit,
+    useHaptics: Boolean,
     onOpenDrawer: () -> Unit
 ) {
     val scrollState = rememberScrollState()
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -62,8 +69,7 @@ fun SettingsScreen(
                         AppLanguage.SYSTEM to stringResource(R.string.settings_language_system),
                         AppLanguage.ENGLISH to "English",
                         AppLanguage.GERMAN to "Deutsch",
-                        AppLanguage.FRENCH to "Français",
-
+                        AppLanguage.FRENCH to "Français"
                     ),
                     selectedValue = preferences.language,
                     onValueSelected = { newLang -> onUpdatePreferences { it.copy(language = newLang) } }
@@ -154,10 +160,49 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            SettingsGroup(title = stringResource(R.string.settings_advanced)) {
+                SwitchPreference(
+                    title = stringResource(R.string.settings_ask_crash_reports),
+                    subtitle = stringResource(R.string.settings_ask_crash_reports_desc),
+                    checked = preferences.askForCrashReports,
+                    onCheckedChange = { newVal -> onUpdatePreferences { it.copy(askForCrashReports = newVal) } }
+                )
+
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.settings_send_last_crash)) },
+                    supportingContent = { Text(stringResource(R.string.settings_send_last_crash_desc)) },
+                    modifier = Modifier.clickable {
+                        val log = CrashReporter.getCrashLog(context)
+                        if (log != null) {
+                            val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
+                                data = Uri.parse("mailto:deine.email@beispiel.de") // TODO: Change to your email
+                                putExtra(Intent.EXTRA_SUBJECT, "FlexyNotes Manual Crash Report")
+                                putExtra(Intent.EXTRA_TEXT, "Device: ${android.os.Build.MODEL}\nAndroid: ${android.os.Build.VERSION.RELEASE}\n\nCrash Log:\n\n$log")
+                            }
+                            context.startActivity(emailIntent)
+                        } else {
+                            Toast.makeText(context, "No crash log found", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                )
+
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.settings_crash_app), color = MaterialTheme.colorScheme.error) },
+                    supportingContent = { Text(stringResource(R.string.settings_crash_app_desc)) },
+                    modifier = Modifier.clickable {
+                        throw RuntimeException("User triggered debug crash from Settings")
+                    },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
             SettingsGroup(title = stringResource(R.string.settings_about)) {
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.settings_version)) },
-                    supportingContent = { Text("v0.9.6") },
+                    supportingContent = { Text("v0.8.5") },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                 )
             }

@@ -1,5 +1,7 @@
 package com.example.FlexyNotes
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.SystemBarStyle
@@ -32,6 +34,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -58,6 +61,7 @@ import com.example.FlexyNotes.ui.screens.NotesListScreen
 import com.example.FlexyNotes.ui.screens.SettingsScreen
 import com.example.FlexyNotes.ui.screens.TrashScreen
 import com.example.FlexyNotes.ui.theme.FlexyNotesTheme
+import com.example.FlexyNotes.util.CrashReporter
 import com.example.FlexyNotes.viewmodel.MainViewModel
 import com.example.FlexyNotes.viewmodel.NotesViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -85,10 +89,17 @@ class MainActivity : AppCompatActivity() {
             var isDataStoreLoaded by rememberSaveable { mutableStateOf(false) }
 
             val lifecycleOwner = LocalLifecycleOwner.current
+            val context = LocalContext.current
+
+            // Crash Log State
+            var crashLog by remember { mutableStateOf<String?>(null) }
 
             splashScreen.setKeepOnScreenCondition { !isDataStoreLoaded }
 
             LaunchedEffect(Unit) {
+                // Check for existing crash log on app start
+                crashLog = CrashReporter.getCrashLog(context)
+
                 if (!isDataStoreLoaded) {
                     delay(100)
                     isDataStoreLoaded = true
@@ -196,6 +207,48 @@ class MainActivity : AppCompatActivity() {
                                 }
                             }
                         }
+                    }
+                }
+
+                // --- Crash Log Dialog Overlay ---
+                if (crashLog != null) {
+                    if (preferences.askForCrashReports) {
+                        AlertDialog(
+                            onDismissRequest = {
+                                CrashReporter.clearCrashLog(context)
+                                crashLog = null
+                            },
+                            title = { Text("App Crashed") },
+                            text = { Text("It looks like FlexyNotes crashed unexpectedly last time. Would you like to send a bug report to the developer to help fix this?") },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    // ACTION_SENDTO with mailto: ensures ONLY email apps are opened, bypassing the generic share sheet
+                                    val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
+                                        data = Uri.parse("mailto:deine.email@beispiel.de") // TODO: Change to your email
+                                        putExtra(Intent.EXTRA_SUBJECT, "FlexyNotes Crash Report")
+                                        putExtra(Intent.EXTRA_TEXT, "Device: ${android.os.Build.MODEL}\nAndroid: ${android.os.Build.VERSION.RELEASE}\n\nCrash Log:\n\n$crashLog")
+                                    }
+                                    context.startActivity(emailIntent)
+
+                                    CrashReporter.clearCrashLog(context)
+                                    crashLog = null
+                                }) {
+                                    Text("Send Report")
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = {
+                                    CrashReporter.clearCrashLog(context)
+                                    crashLog = null
+                                }) {
+                                    Text("Dismiss")
+                                }
+                            }
+                        )
+                    } else {
+                        // User opted out in settings: clear silently
+                        CrashReporter.clearCrashLog(context)
+                        crashLog = null
                     }
                 }
             }
@@ -410,6 +463,7 @@ fun FlexyNotesNavigation(
                 SettingsScreen(
                     preferences = preferences,
                     onUpdatePreferences = onUpdatePreferences,
+                    useHaptics = preferences.useHaptics,
                     onOpenDrawer = { scope.launch { drawerState.open() } }
                 )
             }
