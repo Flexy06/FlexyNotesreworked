@@ -9,7 +9,7 @@ data class UserPreferences(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val useDynamicColor: Boolean = true,
     val sortOrder: SortOrder = SortOrder.DATE_EDITED,
-    val showTimestamp: Boolean = true,
+    val showTimestamp: Boolean = false,
     val useHaptics: Boolean = true,
     val isSecureMode: Boolean = false,
     val isAppLockEnabled: Boolean = false,
