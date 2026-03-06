@@ -61,8 +61,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.flexynotes.app.R
 import com.flexynotes.viewmodel.NotesViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -79,7 +81,6 @@ fun NotesListScreen(
     var selectedNoteIds by remember { mutableStateOf(setOf<Long>()) }
     var showFabMenu by remember { mutableStateOf(false) }
 
-    // Search state
     var isSearching by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     val searchFocusRequester = remember { FocusRequester() }
@@ -120,7 +121,7 @@ fun NotesListScreen(
         topBar = {
             if (selectedNoteIds.isNotEmpty()) {
                 TopAppBar(
-                    title = { Text("${selectedNoteIds.size} selected") },
+                    title = { Text(stringResource(R.string.selected_count, selectedNoteIds.size)) },
                     navigationIcon = {
                         IconButton(onClick = { selectedNoteIds = emptySet() }) {
                             Icon(Icons.Default.Close, contentDescription = "Clear selection")
@@ -149,7 +150,7 @@ fun NotesListScreen(
                         TextField(
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
-                            placeholder = { Text("Search notes...") },
+                            placeholder = { Text(stringResource(R.string.search_notes)) },
                             singleLine = true,
                             colors = TextFieldDefaults.colors(
                                 focusedContainerColor = Color.Transparent,
@@ -180,7 +181,7 @@ fun NotesListScreen(
                 )
             } else {
                 TopAppBar(
-                    title = { Text("Notes") },
+                    title = { Text(stringResource(R.string.nav_notes)) },
                     navigationIcon = {
                         IconButton(onClick = onOpenDrawer) {
                             Icon(Icons.Default.Menu, contentDescription = "Open menu")
@@ -227,7 +228,7 @@ fun NotesListScreen(
                                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp)
                                 ) {
                                     Text(
-                                        text = "Text Note",
+                                        text = stringResource(R.string.text_note),
                                         style = MaterialTheme.typography.labelLarge,
                                         color = MaterialTheme.colorScheme.onSecondaryContainer
                                     )
@@ -255,7 +256,7 @@ fun NotesListScreen(
                                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp)
                                 ) {
                                     Text(
-                                        text = "Checklist",
+                                        text = stringResource(R.string.checklist),
                                         style = MaterialTheme.typography.labelLarge,
                                         color = MaterialTheme.colorScheme.onSecondaryContainer
                                     )
@@ -296,7 +297,7 @@ fun NotesListScreen(
                         .padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("No active notes. Create your first one!")
+                    Text(stringResource(R.string.notes_empty))
                 }
             } else if (displayedNotes.isEmpty() && isSearching) {
                 Box(
@@ -305,7 +306,7 @@ fun NotesListScreen(
                         .padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("No notes found matching \"$searchQuery\"")
+                    Text(stringResource(R.string.no_search_results, searchQuery))
                 }
             } else {
                 LazyVerticalStaggeredGrid(
@@ -322,11 +323,18 @@ fun NotesListScreen(
 
                         val dismissState = rememberSwipeToDismissBoxState(
                             confirmValueChange = { dismissValue ->
-                                if (dismissValue != SwipeToDismissBoxValue.Settled) {
-                                    viewModel.archiveNote(note)
-                                    true
-                                } else {
-                                    false
+                                when (dismissValue) {
+                                    SwipeToDismissBoxValue.StartToEnd -> {
+                                        // Swipe right -> Archive
+                                        viewModel.archiveNote(note)
+                                        true
+                                    }
+                                    SwipeToDismissBoxValue.EndToStart -> {
+                                        // Swipe left -> Trash
+                                        viewModel.moveToTrash(note)
+                                        true
+                                    }
+                                    else -> false
                                 }
                             },
                             positionalThreshold = { totalDistance -> totalDistance * 0.4f }
@@ -348,12 +356,7 @@ fun NotesListScreen(
 
                         val rawOffset = try { dismissState.requireOffset() } catch(_: Exception) { 0f }
                         val isPastThreshold = dismissState.targetValue != SwipeToDismissBoxValue.Settled
-
-                        val targetResistance = if (!isPastThreshold && rawOffset != 0f) {
-                            -rawOffset * 0.4f
-                        } else {
-                            0f
-                        }
+                        val targetResistance = if (!isPastThreshold && rawOffset != 0f) -rawOffset * 0.4f else 0f
 
                         val animatedResistance by animateFloatAsState(
                             targetValue = targetResistance,
@@ -371,12 +374,15 @@ fun NotesListScreen(
                             state = dismissState,
                             modifier = Modifier.zIndex(if (isSwiping) 1f else 0f),
                             backgroundContent = {
+                                val targetColor = when (dismissState.targetValue) {
+                                    SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.secondaryContainer
+                                    SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
+                                    else -> Color.Transparent
+                                }
+
                                 val color by animateColorAsState(
-                                    targetValue = if (dismissState.targetValue != SwipeToDismissBoxValue.Settled) {
-                                        MaterialTheme.colorScheme.secondaryContainer
-                                    } else {
-                                        Color.Transparent
-                                    }, label = "swipeColor"
+                                    targetValue = targetColor,
+                                    label = "swipeColor"
                                 )
 
                                 val alignment = when (dismissState.dismissDirection) {
@@ -388,6 +394,9 @@ fun NotesListScreen(
                                 val paddingStart = if (alignment == Alignment.CenterStart) 20.dp else 0.dp
                                 val paddingEnd = if (alignment == Alignment.CenterEnd) 20.dp else 0.dp
 
+                                val icon = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) Icons.Default.Delete else Icons.Default.Archive
+                                val iconTint = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer
+
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
@@ -396,9 +405,9 @@ fun NotesListScreen(
                                     contentAlignment = alignment
                                 ) {
                                     Icon(
-                                        Icons.Default.Archive,
-                                        contentDescription = "Archive",
-                                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                        imageVector = icon,
+                                        contentDescription = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) "Delete" else "Archive",
+                                        tint = iconTint
                                     )
                                 }
                             },
@@ -412,7 +421,6 @@ fun NotesListScreen(
                                                 if (selectedNoteIds.isNotEmpty()) {
                                                     selectedNoteIds = if (isSelected) selectedNoteIds - note.id else selectedNoteIds + note.id
                                                 } else {
-                                                    // Close search when opening a note
                                                     if (isSearching) {
                                                         isSearching = false
                                                         searchQuery = ""
@@ -440,7 +448,7 @@ fun NotesListScreen(
                                 ) {
                                     Column(modifier = Modifier.padding(16.dp)) {
                                         Text(
-                                            text = note.title.ifEmpty { "Untitled" },
+                                            text = note.title.ifEmpty { stringResource(R.string.untitled) },
                                             style = MaterialTheme.typography.titleMedium
                                         )
                                         if (note.content.isNotBlank()) {
