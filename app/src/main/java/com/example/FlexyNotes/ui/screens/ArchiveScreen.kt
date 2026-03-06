@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -45,6 +46,8 @@ fun ArchiveScreen(
     val archivedNotes by viewModel.archivedNotes.collectAsState()
     var selectedNoteIds by remember { mutableStateOf(setOf<Long>()) }
     val haptic = LocalHapticFeedback.current
+    val density = LocalDensity.current
+    val minDragDistance = with(density) { 100.dp.toPx() }
 
     if (selectedNoteIds.isNotEmpty()) {
         BackHandler {
@@ -109,15 +112,21 @@ fun ArchiveScreen(
                 items(archivedNotes, key = { it.id }) { note ->
                     val isSelected = selectedNoteIds.contains(note.id)
 
+                    val stateHolder = remember { arrayOfNulls<SwipeToDismissBoxState>(1) }
+
                     val dismissState = rememberSwipeToDismissBoxState(
                         confirmValueChange = { dismissValue ->
                             if (dismissValue != SwipeToDismissBoxValue.Settled) {
+                                val offset = try { stateHolder[0]?.requireOffset() ?: 0f } catch (e: Exception) { 0f }
+                                if (Math.abs(offset) < minDragDistance) return@rememberSwipeToDismissBoxState false
+
                                 viewModel.unarchiveNote(note)
                                 true
                             } else false
                         },
                         positionalThreshold = { totalDistance -> totalDistance * 0.4f }
                     )
+                    stateHolder[0] = dismissState
 
                     var previousTarget by remember { mutableStateOf(SwipeToDismissBoxValue.Settled) }
                     LaunchedEffect(dismissState) {

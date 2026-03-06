@@ -38,6 +38,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -60,6 +61,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -86,6 +88,8 @@ fun NotesListScreen(
     val searchFocusRequester = remember { FocusRequester() }
 
     val haptic = LocalHapticFeedback.current
+    val density = LocalDensity.current
+    val minDragDistance = with(density) { 100.dp.toPx() } // Mindest-Distanz gegen versehentliche Swipes
 
     val displayedNotes = remember(notes, searchQuery) {
         if (searchQuery.isBlank()) {
@@ -321,15 +325,23 @@ fun NotesListScreen(
                     items(displayedNotes, key = { it.id }) { note ->
                         val isSelected = selectedNoteIds.contains(note.id)
 
+                        val stateHolder = remember { arrayOfNulls<SwipeToDismissBoxState>(1) }
+
                         val dismissState = rememberSwipeToDismissBoxState(
                             confirmValueChange = { dismissValue ->
                                 when (dismissValue) {
                                     SwipeToDismissBoxValue.StartToEnd -> {
+                                        val offset = try { stateHolder[0]?.requireOffset() ?: 0f } catch (e: Exception) { 0f }
+                                        if (Math.abs(offset) < minDragDistance) return@rememberSwipeToDismissBoxState false
+
                                         // Swipe right -> Archive
                                         viewModel.archiveNote(note)
                                         true
                                     }
                                     SwipeToDismissBoxValue.EndToStart -> {
+                                        val offset = try { stateHolder[0]?.requireOffset() ?: 0f } catch (e: Exception) { 0f }
+                                        if (Math.abs(offset) < minDragDistance) return@rememberSwipeToDismissBoxState false
+
                                         // Swipe left -> Trash
                                         viewModel.moveToTrash(note)
                                         true
@@ -339,6 +351,7 @@ fun NotesListScreen(
                             },
                             positionalThreshold = { totalDistance -> totalDistance * 0.4f }
                         )
+                        stateHolder[0] = dismissState
 
                         var previousTarget by remember { mutableStateOf(SwipeToDismissBoxValue.Settled) }
                         LaunchedEffect(dismissState) {
