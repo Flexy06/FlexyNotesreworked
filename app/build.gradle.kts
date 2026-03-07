@@ -17,15 +17,16 @@ android {
         targetSdk = 35
 
         // INCREMENTED: version code must be higher for every new upload to Play Console
-        versionCode = 4
-        versionName = "1.0.4"
+        versionCode = 5
+        versionName = "1.0.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = true // Enabled for Play Store release
+            isMinifyEnabled = true // Enabled for Play Store release builds
+            isShrinkResources = true // Enabled for Play Store release builds
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

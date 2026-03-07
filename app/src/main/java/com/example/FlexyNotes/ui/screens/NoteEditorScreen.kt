@@ -6,6 +6,11 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -32,8 +37,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
@@ -120,6 +127,8 @@ fun NoteEditorScreen(
 
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) } // State for inline horizontal menu
+
     val datePickerState = rememberDatePickerState()
     val timePickerState = rememberTimePickerState(
         initialHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY),
@@ -186,8 +195,7 @@ fun NoteEditorScreen(
     val currentSaveChanges by rememberUpdatedState(saveChanges)
     val currentHandleBack by rememberUpdatedState(handleBack)
 
-    // Save changes automatically when the composable is disposed (e.g., predictive back)
-    // or when the app goes into the background
+    // Save changes automatically when the composable is disposed
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -305,7 +313,6 @@ fun NoteEditorScreen(
 
     Scaffold(
         topBar = {
-            // Modern floating pill design for the top bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -313,7 +320,6 @@ fun NoteEditorScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Circular back button
                 Surface(
                     onClick = currentHandleBack,
                     shape = RoundedCornerShape(50),
@@ -329,7 +335,6 @@ fun NoteEditorScreen(
                     }
                 }
 
-                // Pill shaped actions bar
                 Surface(
                     shape = RoundedCornerShape(50),
                     color = MaterialTheme.colorScheme.surfaceVariant,
@@ -339,6 +344,7 @@ fun NoteEditorScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(horizontal = 4.dp)
                     ) {
+                        // Main action: Add Reminder
                         IconButton(onClick = {
                             if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -357,54 +363,76 @@ fun NoteEditorScreen(
                             )
                         }
 
+                        // Expanding actions menu
                         if (existingNote != null) {
-                            val shareTitle = stringResource(R.string.share_via)
-                            IconButton(onClick = {
-                                if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            AnimatedVisibility(
+                                visible = showMenu,
+                                enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
+                                exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    val shareTitle = stringResource(R.string.share_via)
+                                    IconButton(onClick = {
+                                        if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        showMenu = false
+                                        val sendIntent = Intent().apply {
+                                            action = Intent.ACTION_SEND
+                                            val shareText = buildString {
+                                                if (existingNote!!.title.isNotBlank()) appendLine(existingNote!!.title)
+                                                if (existingNote!!.title.isNotBlank() && existingNote!!.content.isNotBlank()) appendLine()
 
-                                val sendIntent = Intent().apply {
-                                    action = Intent.ACTION_SEND
-                                    val shareText = buildString {
-                                        if (existingNote!!.title.isNotBlank()) appendLine(existingNote!!.title)
-                                        if (existingNote!!.title.isNotBlank() && existingNote!!.content.isNotBlank()) appendLine()
+                                                val formattedContent = if (existingNote!!.isChecklist) {
+                                                    existingNote!!.content.replace("[ ] ", "☐ ").replace("[x] ", "☑ ")
+                                                } else {
+                                                    existingNote!!.content
+                                                }
 
-                                        val formattedContent = if (existingNote!!.isChecklist) {
-                                            existingNote!!.content.replace("[ ] ", "☐ ").replace("[x] ", "☑ ")
-                                        } else {
-                                            existingNote!!.content
+                                                if (formattedContent.isNotBlank()) append(formattedContent)
+                                            }
+                                            putExtra(Intent.EXTRA_TEXT, shareText)
+                                            type = "text/plain"
                                         }
-
-                                        if (formattedContent.isNotBlank()) append(formattedContent)
+                                        val shareIntent = Intent.createChooser(sendIntent, shareTitle)
+                                        context.startActivity(shareIntent)
+                                    }) {
+                                        Icon(Icons.Default.Share, contentDescription = "Share note", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
-                                    putExtra(Intent.EXTRA_TEXT, shareText)
-                                    type = "text/plain"
+
+                                    IconButton(onClick = {
+                                        if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        showMenu = false
+                                        currentSaveChanges()
+                                        existingNote?.let {
+                                            if (it.id != -1L) viewModel.archiveNote(it)
+                                        }
+                                        onNavigateBack()
+                                    }) {
+                                        Icon(Icons.Default.Archive, contentDescription = "Archive note", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+
+                                    IconButton(onClick = {
+                                        if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        showMenu = false
+                                        currentSaveChanges()
+                                        existingNote?.let {
+                                            if (it.id != -1L) viewModel.moveToTrash(it)
+                                        }
+                                        onNavigateBack()
+                                    }) {
+                                        Icon(Icons.Default.Delete, contentDescription = "Move to trash", tint = MaterialTheme.colorScheme.error)
+                                    }
                                 }
-                                val shareIntent = Intent.createChooser(sendIntent, shareTitle)
-                                context.startActivity(shareIntent)
-                            }) {
-                                Icon(Icons.Default.Share, contentDescription = "Share note", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
 
                             IconButton(onClick = {
-                                if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                currentSaveChanges()
-                                existingNote?.let {
-                                    if (it.id != -1L) viewModel.archiveNote(it)
-                                }
-                                onNavigateBack()
+                                showMenu = !showMenu
+                                if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             }) {
-                                Icon(Icons.Default.Archive, contentDescription = "Archive note", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-
-                            IconButton(onClick = {
-                                if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                currentSaveChanges()
-                                existingNote?.let {
-                                    if (it.id != -1L) viewModel.moveToTrash(it)
-                                }
-                                onNavigateBack()
-                            }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Move to trash", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Icon(
+                                    imageVector = if (showMenu) Icons.Default.ChevronRight else Icons.Default.MoreVert,
+                                    contentDescription = "Toggle options",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
                     }

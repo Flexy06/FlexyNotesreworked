@@ -19,6 +19,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 import com.flexynotes.app.R
 import com.flexynotes.data.AppLanguage
 import com.flexynotes.data.SortOrder
@@ -72,7 +74,23 @@ fun SettingsScreen(
                         AppLanguage.FRENCH to "Français"
                     ),
                     selectedValue = preferences.language,
-                    onValueSelected = { newLang -> onUpdatePreferences { it.copy(language = newLang) } }
+                    onValueSelected = { newLang ->
+                        onUpdatePreferences { it.copy(language = newLang) }
+
+                        // Sprache direkt im System verankern, um Flackern beim Neustart zu verhindern
+                        val localeTag = when (newLang) {
+                            AppLanguage.ENGLISH -> "en"
+                            AppLanguage.GERMAN -> "de"
+                            AppLanguage.FRENCH -> "fr"
+                            AppLanguage.SYSTEM -> ""
+                        }
+                        val appLocale = if (localeTag.isEmpty()) {
+                            LocaleListCompat.getEmptyLocaleList()
+                        } else {
+                            LocaleListCompat.forLanguageTags(localeTag)
+                        }
+                        AppCompatDelegate.setApplicationLocales(appLocale)
+                    }
                 )
 
                 ListPreference(
@@ -175,7 +193,7 @@ fun SettingsScreen(
                         val log = CrashReporter.getCrashLog(context)
                         if (log != null) {
                             val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
-                                data = Uri.parse("mailto:Flexy06developer@proton.me") // TODO: Change to your email
+                                data = Uri.parse("mailto:Flexy06developer@proton.me")
                                 putExtra(Intent.EXTRA_SUBJECT, "FlexyNotes Manual Crash Report")
                                 putExtra(Intent.EXTRA_TEXT, "Device: ${android.os.Build.MODEL}\nAndroid: ${android.os.Build.VERSION.RELEASE}\n\nCrash Log:\n\n$log")
                             }
@@ -187,14 +205,7 @@ fun SettingsScreen(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                 )
 
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.settings_crash_app), color = MaterialTheme.colorScheme.error) },
-                    supportingContent = { Text(stringResource(R.string.settings_crash_app_desc)) },
-                    modifier = Modifier.clickable {
-                        throw RuntimeException("User triggered debug crash from Settings")
-                    },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                )
+
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -202,7 +213,7 @@ fun SettingsScreen(
             SettingsGroup(title = stringResource(R.string.settings_about)) {
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.settings_version)) },
-                    supportingContent = { Text("v1.0.4") },
+                    supportingContent = { Text("v1.0.5") },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                 )
             }
