@@ -33,7 +33,7 @@ import com.flexynotes.util.CrashReporter
 fun SettingsScreen(
     preferences: UserPreferences,
     onUpdatePreferences: ((UserPreferences) -> UserPreferences) -> Unit,
-    useHaptics: Boolean,
+     useHaptics: Boolean,
     onOpenDrawer: () -> Unit
 ) {
     val scrollState = rememberScrollState()

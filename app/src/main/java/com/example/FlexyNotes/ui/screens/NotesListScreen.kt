@@ -149,40 +149,46 @@ fun NotesListScreen(
                     }
                 )
             } else if (isSearching) {
-                TopAppBar(
-                    title = {
-                        TextField(
-                            value = searchQuery,
-                            onValueChange = { searchQuery = it },
-                            placeholder = { Text(stringResource(R.string.search_notes)) },
-                            singleLine = true,
-                            colors = TextFieldDefaults.colors(
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .focusRequester(searchFocusRequester)
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = {
-                            isSearching = false
-                            searchQuery = ""
-                        }) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Close search")
-                        }
-                    },
-                    actions = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { searchQuery = "" }) {
-                                Icon(Icons.Default.Close, contentDescription = "Clear text")
+                // Modern pill-shaped Search Bar
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    tonalElevation = 4.dp
+                ) {
+                    TextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text(stringResource(R.string.search_notes)) },
+                        singleLine = true,
+                        leadingIcon = {
+                            IconButton(onClick = {
+                                isSearching = false
+                                searchQuery = ""
+                            }) {
+                                Icon(Icons.Default.ArrowBack, contentDescription = "Close search")
                             }
-                        }
-                    }
-                )
+                        },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { searchQuery = "" }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Clear text")
+                                }
+                            }
+                        },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(searchFocusRequester)
+                    )
+                }
             } else {
                 TopAppBar(
                     title = { Text(stringResource(R.string.nav_notes)) },
