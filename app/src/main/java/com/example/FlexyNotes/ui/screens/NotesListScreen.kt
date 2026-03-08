@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.flexynotes.app.R
 import com.flexynotes.viewmodel.NotesViewModel
+import androidx.compose.ui.graphics.TransformOrigin
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -148,67 +149,90 @@ fun NotesListScreen(
                         }
                     }
                 )
-            } else if (isSearching) {
-                // Modern pill-shaped Search Bar
-                Surface(
+            } else {
+                // Fixed height to prevent layout shifts
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    shape = RoundedCornerShape(50),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    tonalElevation = 4.dp
+                        .height(64.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    TextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        placeholder = { Text(stringResource(R.string.search_notes)) },
-                        singleLine = true,
-                        leadingIcon = {
-                            IconButton(onClick = {
-                                isSearching = false
-                                searchQuery = ""
-                            }) {
-                                Icon(Icons.Default.ArrowBack, contentDescription = "Close search")
-                            }
+                    AnimatedContent(
+                        targetState = isSearching,
+                        transitionSpec = {
+                            (fadeIn() + scaleIn(initialScale = 0.95f)) togetherWith
+                                    (fadeOut() + scaleOut(targetScale = 0.95f))
                         },
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { searchQuery = "" }) {
-                                    Icon(Icons.Default.Close, contentDescription = "Clear text")
+                        label = "search_transition"
+                    ) { targetIsSearching ->
+                        if (targetIsSearching) {
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                                shape = RoundedCornerShape(50),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                tonalElevation = 4.dp
+                            ) {
+                                TextField(
+                                    value = searchQuery,
+                                    onValueChange = { searchQuery = it },
+                                    placeholder = { Text(stringResource(R.string.search_notes)) },
+                                    singleLine = true,
+                                    leadingIcon = {
+                                        IconButton(onClick = {
+                                            isSearching = false
+                                            searchQuery = ""
+                                        }) {
+                                            Icon(Icons.Default.ArrowBack, contentDescription = "Close search")
+                                        }
+                                    },
+                                    trailingIcon = {
+                                        // Animate the clear text icon
+                                        AnimatedVisibility(
+                                            visible = searchQuery.isNotEmpty(),
+                                            enter = fadeIn() + scaleIn(),
+                                            exit = fadeOut() + scaleOut()
+                                        ) {
+                                            IconButton(onClick = { searchQuery = "" }) {
+                                                Icon(Icons.Default.Close, contentDescription = "Clear text")
+                                            }
+                                        }
+                                    },
+                                    colors = TextFieldDefaults.colors(
+                                        focusedContainerColor = Color.Transparent,
+                                        unfocusedContainerColor = Color.Transparent,
+                                        focusedIndicatorColor = Color.Transparent,
+                                        unfocusedIndicatorColor = Color.Transparent
+                                    ),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .focusRequester(searchFocusRequester)
+                                )
+                            }
+                        } else {
+                            TopAppBar(
+                                title = { Text(stringResource(R.string.nav_notes)) },
+                                navigationIcon = {
+                                    IconButton(onClick = onOpenDrawer) {
+                                        Icon(Icons.Default.Menu, contentDescription = "Open menu")
+                                    }
+                                },
+                                actions = {
+                                    IconButton(onClick = { isSearching = true }) {
+                                        Icon(Icons.Default.Search, contentDescription = "Search notes")
+                                    }
+                                    IconButton(onClick = onGridViewToggle) {
+                                        Icon(
+                                            imageVector = if (isGridView) Icons.Default.ViewAgenda else Icons.Default.GridView,
+                                            contentDescription = "Toggle view"
+                                        )
+                                    }
                                 }
-                            }
-                        },
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .focusRequester(searchFocusRequester)
-                    )
-                }
-            } else {
-                TopAppBar(
-                    title = { Text(stringResource(R.string.nav_notes)) },
-                    navigationIcon = {
-                        IconButton(onClick = onOpenDrawer) {
-                            Icon(Icons.Default.Menu, contentDescription = "Open menu")
-                        }
-                    },
-                    actions = {
-                        IconButton(onClick = { isSearching = true }) {
-                            Icon(Icons.Default.Search, contentDescription = "Search notes")
-                        }
-                        IconButton(onClick = onGridViewToggle) {
-                            Icon(
-                                imageVector = if (isGridView) Icons.Default.ViewAgenda else Icons.Default.GridView,
-                                contentDescription = "Toggle view"
                             )
                         }
                     }
-                )
+                }
             }
         },
         floatingActionButton = {
@@ -216,8 +240,15 @@ fun NotesListScreen(
                 Column(horizontalAlignment = Alignment.End) {
                     AnimatedVisibility(
                         visible = showFabMenu,
-                        enter = fadeIn() + slideInVertically(initialOffsetY = { 50 }),
-                        exit = fadeOut() + slideOutVertically(targetOffsetY = { 50 })
+                        // Scale from the bottom right corner (near the FAB)
+                        enter = fadeIn() + scaleIn(
+                            initialScale = 0.8f,
+                            transformOrigin = TransformOrigin(1f, 1f)
+                        ) + slideInVertically(initialOffsetY = { 50 }),
+                        exit = fadeOut() + scaleOut(
+                            targetScale = 0.8f,
+                            transformOrigin = TransformOrigin(1f, 1f)
+                        ) + slideOutVertically(targetOffsetY = { 50 })
                     ) {
                         Column(
                             horizontalAlignment = Alignment.End,
@@ -286,9 +317,16 @@ fun NotesListScreen(
                             if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             showFabMenu = !showFabMenu
                         },
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                        // Change color when menu is open to indicate state
+                        containerColor = if (showFabMenu) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = if (showFabMenu) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onPrimaryContainer
                     ) {
-                        val rotation by animateFloatAsState(targetValue = if (showFabMenu) 45f else 0f, label = "fab_rotate")
+                        // Add spring animation for a bouncy rotation effect
+                        val rotation by animateFloatAsState(
+                            targetValue = if (showFabMenu) 45f else 0f,
+                            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                            label = "fab_rotate"
+                        )
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = "Create new",

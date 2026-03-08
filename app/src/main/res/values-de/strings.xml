@@ -55,6 +55,7 @@
     <string name="settings_version">Version</string>
 
     <!-- Notes List Screen -->
+    <string name="settings_crash_app_desc">Einen Absturz erzwingen, um das Berichterstattungssystem zu testen</string>
     <string name="notes_empty">Keine aktiven Notizen. Erstelle deine erste!</string>
     <string name="search_notes">Notizen durchsuchen...</string>
     <string name="no_search_results">Keine Notizen gefunden für \"%s\"</string>
@@ -79,4 +80,10 @@
     <string name="empty_trash_desc">Bist du sicher, dass du alle Notizen im Papierkorb dauerhaft löschen möchtest? Dies kann nicht rückgängig gemacht werden.</string>
     <string name="delete_permanently">Dauerhaft löschen</string>
     <string name="delete_permanently_desc">Bist du sicher, dass du die markierte(n) Notiz(en) dauerhaft löschen möchtest? Dies kann nicht rückgängig gemacht werden.</string>
+    <string name="settings_advanced">Erweitert</string>
+    <string name="settings_ask_crash_reports">Nach Absturzberichten fragen</string>
+    <string name="settings_ask_crash_reports_desc">Nach einem unerwarteten Absturz zum Senden eines Fehlerberichts auffordern</string>
+    <string name="settings_send_last_crash">Letzten Absturzbericht senden</string>
+    <string name="settings_send_last_crash_desc">Den zuletzt aufgezeichneten Absturzbericht manuell senden</string>
+    <string name="settings_crash_app">App zum Absturz bringen (Debug)</string>
 </resources>

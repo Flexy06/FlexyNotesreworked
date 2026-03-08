@@ -213,7 +213,7 @@ fun SettingsScreen(
             SettingsGroup(title = stringResource(R.string.settings_about)) {
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.settings_version)) },
-                    supportingContent = { Text("v1.0.5") },
+                    supportingContent = { Text("v1.0.7") },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                 )
             }

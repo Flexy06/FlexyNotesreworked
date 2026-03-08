@@ -32,7 +32,7 @@
     <string name="settings_theme_light">Clair</string>
     <string name="settings_theme_dark">Sombre</string>
     <string name="settings_dynamic_colors">Couleurs dynamiques</string>
-    <string name="settings_dynamic_colors_desc">Assortit les couleurs de l\'application à votre fond d\'écran</string>
+    <string name="settings_dynamic_colors_desc">Assortir les couleurs de l\'application à votre fond d\'écran</string>
     <string name="settings_oled">Noir pur (OLED)</string>
     <string name="settings_oled_desc">Économise la batterie sur les écrans OLED</string>
 
@@ -48,13 +48,14 @@
 
     <string name="settings_privacy">Confidentialité</string>
     <string name="settings_app_lock">Verrouillage de l\'application</string>
-    <string name="settings_app_lock_desc">Nécessite la biométrie pour ouvrir l\'application</string>
+    <string name="settings_app_lock_desc">Nécessite la Biométrie pour ouvrir</string>
     <string name="settings_secure_mode">Mode sécurisé</string>
     <string name="settings_secure_mode_desc">Empêche les captures d\'écran et masque l\'application dans les récents</string>
     <string name="settings_about">À propos</string>
     <string name="settings_version">Version</string>
 
     <!-- Notes List Screen -->
+    <string name="settings_crash_app_desc">Forcer un plantage pour tester le système de rapport</string>
     <string name="notes_empty">Aucune note active. Créez votre première note !</string>
     <string name="search_notes">Rechercher des notes...</string>
     <string name="no_search_results">Aucune note trouvée pour \"%s\"</string>
@@ -79,4 +80,10 @@
     <string name="empty_trash_desc">Êtes-vous sûr de vouloir supprimer définitivement toutes les notes de la corbeille ? Cette action est irréversible.</string>
     <string name="delete_permanently">Supprimer définitivement</string>
     <string name="delete_permanently_desc">Êtes-vous sûr de vouloir supprimer définitivement la/les note(s) sélectionnée(s) ? Cette action est irréversible.</string>
+    <string name="settings_advanced">Avancé</string>
+    <string name="settings_ask_crash_reports">Demander les rapports de plantage</string>
+    <string name="settings_ask_crash_reports_desc">Demander l\'envoi d\'un rapport d\'erreur après un plantage inattendu</string>
+    <string name="settings_send_last_crash">Envoyer le dernier rapport de plantage</string>
+    <string name="settings_send_last_crash_desc">Envoyer manuellement le dernier journal de plantage enregistré</string>
+    <string name="settings_crash_app">Faire planter l\'application (Debug)</string>
 </resources>
