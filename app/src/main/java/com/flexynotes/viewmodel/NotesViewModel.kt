@@ -3,8 +3,7 @@ package com.flexynotes.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flexynotes.data.NoteEntity
-import com.flexynotes.domain.usecase.GetActiveNotesUseCase
-import com.flexynotes.repository.NoteRepository
+import com.flexynotes.domain.usecase.*
 import com.flexynotes.util.ReminderManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -16,38 +15,47 @@ import javax.inject.Inject
 @HiltViewModel
 class NotesViewModel @Inject constructor(
     private val getActiveNotesUseCase: GetActiveNotesUseCase,
-    private val repository: NoteRepository,
+    private val getArchivedNotesUseCase: GetArchivedNotesUseCase,
+    private val getDeletedNotesUseCase: GetDeletedNotesUseCase,
+    private val getNoteByIdUseCase: GetNoteByIdUseCase,
+    private val addNoteUseCase: AddNoteUseCase,
+    private val updateNoteUseCase: UpdateNoteUseCase,
+    private val archiveNoteUseCase: ArchiveNoteUseCase,
+    private val unarchiveNoteUseCase: UnarchiveNoteUseCase,
+    private val moveToTrashUseCase: MoveToTrashUseCase,
+    private val restoreNoteUseCase: RestoreNoteUseCase,
+    private val deletePermanentlyUseCase: DeletePermanentlyUseCase,
+    private val clearTrashUseCase: ClearTrashUseCase,
     private val reminderManager: ReminderManager
 ) : ViewModel() {
 
     val activeNotes: StateFlow<List<NoteEntity>> = getActiveNotesUseCase()
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.Lazily,
+            started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
 
-    val archivedNotes: StateFlow<List<NoteEntity>> = repository.archivedNotes
+    val archivedNotes: StateFlow<List<NoteEntity>> = getArchivedNotesUseCase()
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.Lazily,
+            started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
 
-    val deletedNotes: StateFlow<List<NoteEntity>> = repository.deletedNotes
+    val deletedNotes: StateFlow<List<NoteEntity>> = getDeletedNotesUseCase()
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.Lazily,
+            started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
 
     suspend fun getNoteById(id: Long): NoteEntity? {
-        return repository.getNoteById(id)
+        return getNoteByIdUseCase(id)
     }
 
     fun addNote(title: String, content: String, isChecklist: Boolean = false, reminderTime: Long? = null) {
         viewModelScope.launch {
-            // Prevent scheduling reminders in the past
             val validReminderTime = if (reminderTime != null && reminderTime > System.currentTimeMillis()) reminderTime else null
 
             val newNote = NoteEntity(
@@ -58,17 +66,20 @@ class NotesViewModel @Inject constructor(
                 createdAt = System.currentTimeMillis(),
                 modifiedAt = System.currentTimeMillis()
             )
-            val id = repository.upsertNote(newNote)
 
-            if (validReminderTime != null) {
-                reminderManager.scheduleReminder(id, title, content, validReminderTime)
+            try {
+                val id = addNoteUseCase(newNote)
+                if (validReminderTime != null) {
+                    reminderManager.scheduleReminder(id, title, content, validReminderTime)
+                }
+            } catch (e: IllegalArgumentException) {
+                // Ignore empty notes
             }
         }
     }
 
     fun updateNote(note: NoteEntity, newTitle: String, newContent: String, newReminderTime: Long? = null) {
         viewModelScope.launch {
-            // Clear reminder if the new time is in the past
             val isTimeValid = newReminderTime != null && newReminderTime > System.currentTimeMillis()
             val finalReminderTime = if (isTimeValid) newReminderTime else null
 
@@ -78,38 +89,38 @@ class NotesViewModel @Inject constructor(
                 reminderTime = finalReminderTime,
                 modifiedAt = System.currentTimeMillis()
             )
-            repository.upsertNote(updatedNote)
+
+            updateNoteUseCase(updatedNote)
 
             if (finalReminderTime != null) {
                 reminderManager.scheduleReminder(note.id, newTitle, newContent, finalReminderTime)
             } else if (note.reminderTime != null) {
-                // Cancel removed or invalid past reminders
                 reminderManager.cancelReminder(note.id)
             }
         }
     }
 
     fun archiveNote(note: NoteEntity) {
-        viewModelScope.launch { repository.archiveNote(note) }
+        viewModelScope.launch { archiveNoteUseCase(note) }
     }
 
     fun unarchiveNote(note: NoteEntity) {
-        viewModelScope.launch { repository.unarchiveNote(note) }
+        viewModelScope.launch { unarchiveNoteUseCase(note) }
     }
 
     fun moveToTrash(note: NoteEntity) {
-        viewModelScope.launch { repository.moveNoteToTrash(note) }
+        viewModelScope.launch { moveToTrashUseCase(note) }
     }
 
     fun restoreNote(note: NoteEntity) {
-        viewModelScope.launch { repository.restoreNote(note) }
+        viewModelScope.launch { restoreNoteUseCase(note) }
     }
 
     fun deletePermanently(note: NoteEntity) {
-        viewModelScope.launch { repository.deletePermanently(note) }
+        viewModelScope.launch { deletePermanentlyUseCase(note) }
     }
 
     fun clearTrash() {
-        viewModelScope.launch { repository.clearTrash() }
+        viewModelScope.launch { clearTrashUseCase() }
     }
 }
