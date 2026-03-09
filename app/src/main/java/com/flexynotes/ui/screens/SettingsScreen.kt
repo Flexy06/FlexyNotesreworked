@@ -78,7 +78,6 @@ fun SettingsScreen(
                     onValueSelected = { newLang ->
                         onUpdatePreferences { it.copy(language = newLang) }
 
-                        // Sprache direkt im System verankern, um Flackern beim Neustart zu verhindern
                         val localeTag = when (newLang) {
                             AppLanguage.ENGLISH -> "en"
                             AppLanguage.GERMAN -> "de"
@@ -193,8 +192,10 @@ fun SettingsScreen(
                     modifier = Modifier.clickable {
                         val log = CrashReporter.getCrashLog(context)
                         if (log != null) {
+                            val developerEmail = context.getString(R.string.developer_email)
+
                             val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
-                                data = Uri.parse("mailto:Flexy06developer@proton.me")
+                                data = Uri.parse("mailto:$developerEmail")
                                 putExtra(Intent.EXTRA_SUBJECT, "FlexyNotes Manual Crash Report")
                                 putExtra(Intent.EXTRA_TEXT, "Device: ${android.os.Build.MODEL}\nAndroid: ${android.os.Build.VERSION.RELEASE}\n\nCrash Log:\n\n$log")
                             }

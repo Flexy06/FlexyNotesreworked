@@ -198,9 +198,9 @@ class MainActivity : AppCompatActivity() {
                             text = { Text("It looks like FlexyNotes crashed unexpectedly last time. Would you like to send a bug report to the developer to help fix this?") },
                             confirmButton = {
                                 TextButton(onClick = {
-                                    // ACTION_SENDTO with mailto: ensures ONLY email apps are opened, bypassing the generic share sheet
+                                    val developerEmail = context.getString(R.string.developer_email)
                                     val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
-                                        data = Uri.parse("mailto:Flexy06developer@proton.me")
+                                        data = Uri.parse("mailto:$developerEmail")
                                         putExtra(Intent.EXTRA_SUBJECT, "FlexyNotes Crash Report")
                                         putExtra(Intent.EXTRA_TEXT, "Device: ${android.os.Build.MODEL}\nAndroid: ${android.os.Build.VERSION.RELEASE}\n\nCrash Log:\n\n$crashLog")
                                     }

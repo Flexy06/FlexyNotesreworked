@@ -391,7 +391,16 @@ fun NoteEditorScreen(
                                             type = "text/plain"
                                         }
                                         val shareIntent = Intent.createChooser(sendIntent, shareTitle)
-                                        context.startActivity(shareIntent)
+                                        try {
+                                            context.startActivity(shareIntent)
+                                        } catch (e: android.content.ActivityNotFoundException) {
+                                            // Notify user if no suitable app is installed to handle the share action
+                                            android.widget.Toast.makeText(
+                                                context,
+                                                "No app found to share this note.",
+                                                android.widget.Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
                                     }) {
                                         Icon(Icons.Default.Share, contentDescription = "Share note", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }

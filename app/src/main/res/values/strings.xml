@@ -87,4 +87,8 @@
     <string name="empty_trash_desc">Are you sure you want to permanently delete all notes in the trash? This action cannot be undone.</string>
     <string name="delete_permanently">Delete Permanently</string>
     <string name="delete_permanently_desc">Are you sure you want to permanently delete the selected note(s)? This action cannot be undone.</string>
+
+    <!-- contact -->
+    <string name="developer_email" translatable="false">Flexy06developer@proton.me</string>
+
 </resources>
