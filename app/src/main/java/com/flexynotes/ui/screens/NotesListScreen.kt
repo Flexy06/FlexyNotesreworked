@@ -67,6 +67,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.flexynotes.app.R
@@ -526,7 +527,9 @@ fun NotesListScreen(
                                             Column(modifier = Modifier.padding(16.dp)) {
                                                 Text(
                                                     text = note.title.ifEmpty { stringResource(R.string.untitled) },
-                                                    style = MaterialTheme.typography.titleMedium
+                                                    style = MaterialTheme.typography.titleMedium, // Hier hat das Komma gefehlt
+                                                    maxLines = 2,
+                                                    overflow = TextOverflow.Ellipsis
                                                 )
                                                 if (note.content.isNotBlank()) {
                                                     Spacer(modifier = Modifier.height(4.dp))

@@ -3,6 +3,7 @@ package com.flexynotes.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flexynotes.data.NoteEntity
+import com.flexynotes.domain.usecase.GetActiveNotesUseCase
 import com.flexynotes.repository.NoteRepository
 import com.flexynotes.util.ReminderManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,28 +15,29 @@ import javax.inject.Inject
 
 @HiltViewModel
 class NotesViewModel @Inject constructor(
+    private val getActiveNotesUseCase: GetActiveNotesUseCase,
     private val repository: NoteRepository,
-    private val reminderManager: ReminderManager // Make sure ReminderManager is injected
+    private val reminderManager: ReminderManager
 ) : ViewModel() {
 
-    val activeNotes: StateFlow<List<NoteEntity>> = repository.activeNotes
+    val activeNotes: StateFlow<List<NoteEntity>> = getActiveNotesUseCase()
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = emptyList()
         )
 
     val archivedNotes: StateFlow<List<NoteEntity>> = repository.archivedNotes
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = emptyList()
         )
 
     val deletedNotes: StateFlow<List<NoteEntity>> = repository.deletedNotes
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = emptyList()
         )
 
@@ -45,7 +47,7 @@ class NotesViewModel @Inject constructor(
 
     fun addNote(title: String, content: String, isChecklist: Boolean = false, reminderTime: Long? = null) {
         viewModelScope.launch {
-            // FIX: Don't set reminders that are in the past
+            // Prevent scheduling reminders in the past
             val validReminderTime = if (reminderTime != null && reminderTime > System.currentTimeMillis()) reminderTime else null
 
             val newNote = NoteEntity(
@@ -66,7 +68,7 @@ class NotesViewModel @Inject constructor(
 
     fun updateNote(note: NoteEntity, newTitle: String, newContent: String, newReminderTime: Long? = null) {
         viewModelScope.launch {
-            // FIX: Automatically clear reminder if the user saves a note where the reminder is already in the past
+            // Clear reminder if the new time is in the past
             val isTimeValid = newReminderTime != null && newReminderTime > System.currentTimeMillis()
             val finalReminderTime = if (isTimeValid) newReminderTime else null
 
@@ -81,7 +83,7 @@ class NotesViewModel @Inject constructor(
             if (finalReminderTime != null) {
                 reminderManager.scheduleReminder(note.id, newTitle, newContent, finalReminderTime)
             } else if (note.reminderTime != null) {
-                // Cancel if it was removed or if it became invalid (past)
+                // Cancel removed or invalid past reminders
                 reminderManager.cancelReminder(note.id)
             }
         }
