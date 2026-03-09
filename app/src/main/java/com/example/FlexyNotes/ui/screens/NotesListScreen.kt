@@ -5,6 +5,8 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -60,6 +62,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -68,7 +71,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.flexynotes.app.R
 import com.flexynotes.viewmodel.NotesViewModel
-import androidx.compose.ui.graphics.TransformOrigin
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -338,195 +340,215 @@ fun NotesListScreen(
         }
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize()) {
-            if (notes.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(stringResource(R.string.notes_empty))
-                }
-            } else if (displayedNotes.isEmpty() && isSearching) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(stringResource(R.string.no_search_results, searchQuery))
-                }
-            } else {
-                LazyVerticalStaggeredGrid(
-                    columns = StaggeredGridCells.Fixed(if (isGridView) 2 else 1),
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentPadding = PaddingValues(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalItemSpacing = 8.dp
-                ) {
-                    items(displayedNotes, key = { it.id }) { note ->
-                        val isSelected = selectedNoteIds.contains(note.id)
 
-                        val stateHolder = remember { arrayOfNulls<SwipeToDismissBoxState>(1) }
+            // Determine the current UI state
+            val contentState = when {
+                notes.isEmpty() -> "EMPTY"
+                displayedNotes.isEmpty() && isSearching -> "NO_RESULTS"
+                else -> "CONTENT"
+            }
 
-                        val dismissState = rememberSwipeToDismissBoxState(
-                            confirmValueChange = { dismissValue ->
-                                when (dismissValue) {
-                                    SwipeToDismissBoxValue.StartToEnd -> {
-                                        val offset = try { stateHolder[0]?.requireOffset() ?: 0f } catch (e: Exception) { 0f }
-                                        if (Math.abs(offset) < minDragDistance) return@rememberSwipeToDismissBoxState false
-
-                                        // Swipe right -> Archive
-                                        viewModel.archiveNote(note)
-                                        true
-                                    }
-                                    SwipeToDismissBoxValue.EndToStart -> {
-                                        val offset = try { stateHolder[0]?.requireOffset() ?: 0f } catch (e: Exception) { 0f }
-                                        if (Math.abs(offset) < minDragDistance) return@rememberSwipeToDismissBoxState false
-
-                                        // Swipe left -> Trash
-                                        viewModel.moveToTrash(note)
-                                        true
-                                    }
-                                    else -> false
-                                }
-                            },
-                            positionalThreshold = { totalDistance -> totalDistance * 0.4f }
-                        )
-                        stateHolder[0] = dismissState
-
-                        var previousTarget by remember { mutableStateOf(SwipeToDismissBoxValue.Settled) }
-                        LaunchedEffect(dismissState) {
-                            snapshotFlow { dismissState.targetValue }.collect { currentTarget ->
-                                if (useHaptics) {
-                                    if (previousTarget == SwipeToDismissBoxValue.Settled && currentTarget != SwipeToDismissBoxValue.Settled) {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    } else if (previousTarget != SwipeToDismissBoxValue.Settled && currentTarget == SwipeToDismissBoxValue.Settled) {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    }
-                                }
-                                previousTarget = currentTarget
-                            }
+            // Smoothly crossfade between states
+            Crossfade(
+                targetState = contentState,
+                label = "content_crossfade",
+                animationSpec = tween(durationMillis = 300),
+                modifier = Modifier.fillMaxSize()
+            ) { state ->
+                when (state) {
+                    "EMPTY" -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(paddingValues),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(stringResource(R.string.notes_empty))
                         }
+                    }
+                    "NO_RESULTS" -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(paddingValues),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(stringResource(R.string.no_search_results, searchQuery))
+                        }
+                    }
+                    "CONTENT" -> {
+                        LazyVerticalStaggeredGrid(
+                            columns = StaggeredGridCells.Fixed(if (isGridView) 2 else 1),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(paddingValues),
+                            contentPadding = PaddingValues(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalItemSpacing = 8.dp
+                        ) {
+                            items(displayedNotes, key = { it.id }) { note ->
+                                val isSelected = selectedNoteIds.contains(note.id)
 
-                        val rawOffset = try { dismissState.requireOffset() } catch(_: Exception) { 0f }
-                        val isPastThreshold = dismissState.targetValue != SwipeToDismissBoxValue.Settled
-                        val targetResistance = if (!isPastThreshold && rawOffset != 0f) -rawOffset * 0.4f else 0f
+                                val stateHolder = remember { arrayOfNulls<SwipeToDismissBoxState>(1) }
 
-                        val animatedResistance by animateFloatAsState(
-                            targetValue = targetResistance,
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                stiffness = Spring.StiffnessLow
-                            ),
-                            label = "resistance"
-                        )
+                                val dismissState = rememberSwipeToDismissBoxState(
+                                    confirmValueChange = { dismissValue ->
+                                        when (dismissValue) {
+                                            SwipeToDismissBoxValue.StartToEnd -> {
+                                                val offset = try { stateHolder[0]?.requireOffset() ?: 0f } catch (e: Exception) { 0f }
+                                                if (Math.abs(offset) < minDragDistance) return@rememberSwipeToDismissBoxState false
 
-                        val isSwiping = dismissState.dismissDirection != SwipeToDismissBoxValue.Settled ||
-                                dismissState.targetValue != SwipeToDismissBoxValue.Settled
+                                                viewModel.archiveNote(note)
+                                                true
+                                            }
+                                            SwipeToDismissBoxValue.EndToStart -> {
+                                                val offset = try { stateHolder[0]?.requireOffset() ?: 0f } catch (e: Exception) { 0f }
+                                                if (Math.abs(offset) < minDragDistance) return@rememberSwipeToDismissBoxState false
 
-                        SwipeToDismissBox(
-                            state = dismissState,
-                            modifier = Modifier.zIndex(if (isSwiping) 1f else 0f),
-                            backgroundContent = {
-                                val targetColor = when (dismissState.targetValue) {
-                                    SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.secondaryContainer
-                                    SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
-                                    else -> Color.Transparent
+                                                viewModel.moveToTrash(note)
+                                                true
+                                            }
+                                            else -> false
+                                        }
+                                    },
+                                    positionalThreshold = { totalDistance -> totalDistance * 0.4f }
+                                )
+                                stateHolder[0] = dismissState
+
+                                var previousTarget by remember { mutableStateOf(SwipeToDismissBoxValue.Settled) }
+                                LaunchedEffect(dismissState) {
+                                    snapshotFlow { dismissState.targetValue }.collect { currentTarget ->
+                                        if (useHaptics) {
+                                            if (previousTarget == SwipeToDismissBoxValue.Settled && currentTarget != SwipeToDismissBoxValue.Settled) {
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            } else if (previousTarget != SwipeToDismissBoxValue.Settled && currentTarget == SwipeToDismissBoxValue.Settled) {
+                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            }
+                                        }
+                                        previousTarget = currentTarget
+                                    }
                                 }
 
-                                val color by animateColorAsState(
-                                    targetValue = targetColor,
-                                    label = "swipeColor"
+                                val rawOffset = try { dismissState.requireOffset() } catch(_: Exception) { 0f }
+                                val isPastThreshold = dismissState.targetValue != SwipeToDismissBoxValue.Settled
+                                val targetResistance = if (!isPastThreshold && rawOffset != 0f) -rawOffset * 0.4f else 0f
+
+                                val animatedResistance by animateFloatAsState(
+                                    targetValue = targetResistance,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessLow
+                                    ),
+                                    label = "resistance"
                                 )
 
-                                val alignment = when (dismissState.dismissDirection) {
-                                    SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
-                                    SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
-                                    else -> Alignment.CenterStart
-                                }
+                                val isSwiping = dismissState.dismissDirection != SwipeToDismissBoxValue.Settled ||
+                                        dismissState.targetValue != SwipeToDismissBoxValue.Settled
 
-                                val paddingStart = if (alignment == Alignment.CenterStart) 20.dp else 0.dp
-                                val paddingEnd = if (alignment == Alignment.CenterEnd) 20.dp else 0.dp
-
-                                val icon = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) Icons.Default.Delete else Icons.Default.Archive
-                                val iconTint = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer
-
-                                Box(
+                                SwipeToDismissBox(
+                                    state = dismissState,
                                     modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(color, MaterialTheme.shapes.medium)
-                                        .padding(start = paddingStart, end = paddingEnd),
-                                    contentAlignment = alignment
-                                ) {
-                                    Icon(
-                                        imageVector = icon,
-                                        contentDescription = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) "Delete" else "Archive",
-                                        tint = iconTint
-                                    )
-                                }
-                            },
-                            content = {
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .graphicsLayer { translationX = animatedResistance }
-                                        .combinedClickable(
-                                            onClick = {
-                                                if (selectedNoteIds.isNotEmpty()) {
-                                                    selectedNoteIds = if (isSelected) selectedNoteIds - note.id else selectedNoteIds + note.id
-                                                } else {
-                                                    if (isSearching) {
-                                                        isSearching = false
-                                                        searchQuery = ""
-                                                    }
-                                                    onNavigateToEditor(note.id, false)
-                                                }
-                                            },
-                                            onLongClick = {
-                                                if (!isSelected) {
-                                                    if (useHaptics) {
-                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    }
-                                                    selectedNoteIds = selectedNoteIds + note.id
-                                                }
-                                            }
-                                        ),
-                                    border = if (isSelected) {
-                                        BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-                                    } else {
-                                        BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                                    },
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = if (isSelected) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface
-                                    )
-                                ) {
-                                    Column(modifier = Modifier.padding(16.dp)) {
-                                        Text(
-                                            text = note.title.ifEmpty { stringResource(R.string.untitled) },
-                                            style = MaterialTheme.typography.titleMedium
+                                        .animateItem()
+                                        .zIndex(if (isSwiping) 1f else 0f),
+                                    backgroundContent = {
+                                        val targetColor = when (dismissState.targetValue) {
+                                            SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.secondaryContainer
+                                            SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
+                                            else -> Color.Transparent
+                                        }
+
+                                        val color by animateColorAsState(
+                                            targetValue = targetColor,
+                                            label = "swipeColor"
                                         )
-                                        if (note.content.isNotBlank()) {
-                                            Spacer(modifier = Modifier.height(4.dp))
 
-                                            val displayContent = if (note.isChecklist) {
-                                                note.content.replace("[ ] ", "☐ ").replace("[x] ", "☑ ")
-                                            } else {
-                                                note.content
-                                            }
+                                        val alignment = when (dismissState.dismissDirection) {
+                                            SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+                                            SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
+                                            else -> Alignment.CenterStart
+                                        }
 
-                                            Text(
-                                                text = displayContent,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                maxLines = 5
+                                        val paddingStart = if (alignment == Alignment.CenterStart) 20.dp else 0.dp
+                                        val paddingEnd = if (alignment == Alignment.CenterEnd) 20.dp else 0.dp
+
+                                        val icon = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) Icons.Default.Delete else Icons.Default.Archive
+                                        val iconTint = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer
+
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(color, MaterialTheme.shapes.medium)
+                                                .padding(start = paddingStart, end = paddingEnd),
+                                            contentAlignment = alignment
+                                        ) {
+                                            Icon(
+                                                imageVector = icon,
+                                                contentDescription = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) "Delete" else "Archive",
+                                                tint = iconTint
                                             )
                                         }
+                                    },
+                                    content = {
+                                        Card(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .graphicsLayer { translationX = animatedResistance }
+                                                .combinedClickable(
+                                                    onClick = {
+                                                        if (selectedNoteIds.isNotEmpty()) {
+                                                            selectedNoteIds = if (isSelected) selectedNoteIds - note.id else selectedNoteIds + note.id
+                                                        } else {
+                                                            if (isSearching) {
+                                                                isSearching = false
+                                                                searchQuery = ""
+                                                            }
+                                                            onNavigateToEditor(note.id, false)
+                                                        }
+                                                    },
+                                                    onLongClick = {
+                                                        if (!isSelected) {
+                                                            if (useHaptics) {
+                                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                            }
+                                                            selectedNoteIds = selectedNoteIds + note.id
+                                                        }
+                                                    }
+                                                ),
+                                            border = if (isSelected) {
+                                                BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+                                            } else {
+                                                BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                                            },
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = if (isSelected) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface
+                                            )
+                                        ) {
+                                            Column(modifier = Modifier.padding(16.dp)) {
+                                                Text(
+                                                    text = note.title.ifEmpty { stringResource(R.string.untitled) },
+                                                    style = MaterialTheme.typography.titleMedium
+                                                )
+                                                if (note.content.isNotBlank()) {
+                                                    Spacer(modifier = Modifier.height(4.dp))
+
+                                                    val displayContent = if (note.isChecklist) {
+                                                        note.content.replace("[ ] ", "☐ ").replace("[x] ", "☑ ")
+                                                    } else {
+                                                        note.content
+                                                    }
+
+                                                    Text(
+                                                        text = displayContent,
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        maxLines = 5
+                                                    )
+                                                }
+                                            }
+                                        }
                                     }
-                                }
+                                )
                             }
-                        )
+                        }
                     }
                 }
             }
@@ -539,7 +561,7 @@ fun NotesListScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.3f))
+                        // Allows dismissing the FAB menu by clicking outside without a dark overlay
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
