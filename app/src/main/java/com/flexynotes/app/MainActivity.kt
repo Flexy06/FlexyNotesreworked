@@ -63,7 +63,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.navigation.navDeepLink
-
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -75,7 +75,7 @@ class MainActivity : AppCompatActivity() {
 
         setContent {
             val mainViewModel: MainViewModel = hiltViewModel()
-            val preferences by mainViewModel.preferences.collectAsState()
+            val preferences by mainViewModel.preferences.collectAsStateWithLifecycle()
 
             var isUnlocked by rememberSaveable { mutableStateOf(false) }
             var showPromptTrigger by remember { mutableStateOf(true) }

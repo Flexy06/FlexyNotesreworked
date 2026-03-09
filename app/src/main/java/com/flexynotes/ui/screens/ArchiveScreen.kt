@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.flexynotes.app.R
 import com.flexynotes.viewmodel.NotesViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -43,7 +44,7 @@ fun ArchiveScreen(
     onOpenDrawer: () -> Unit,
     onNavigateToEditor: (Long) -> Unit
 ) {
-    val archivedNotes by viewModel.archivedNotes.collectAsState()
+    val archivedNotes by viewModel.archivedNotes.collectAsStateWithLifecycle()
     var selectedNoteIds by remember { mutableStateOf(setOf<Long>()) }
     val haptic = LocalHapticFeedback.current
     val density = LocalDensity.current

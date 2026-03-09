@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import com.flexynotes.app.R
 import com.flexynotes.data.NoteEntity
 import com.flexynotes.viewmodel.NotesViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -38,7 +39,7 @@ fun TrashScreen(
     useHaptics: Boolean,
     onOpenDrawer: () -> Unit
 ) {
-    val deletedNotes by viewModel.deletedNotes.collectAsState()
+    val deletedNotes by viewModel.deletedNotes.collectAsStateWithLifecycle()
 
     var selectedNoteIds by remember { mutableStateOf(setOf<Long>()) }
     var showEmptyTrashDialog by remember { mutableStateOf(false) }

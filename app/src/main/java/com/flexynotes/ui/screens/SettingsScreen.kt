@@ -27,6 +27,7 @@ import com.flexynotes.data.SortOrder
 import com.flexynotes.data.ThemeMode
 import com.flexynotes.data.UserPreferences
 import com.flexynotes.util.CrashReporter
+//import androidx.lifecycle.compose.collectAsStateWithLifecycle -> handled by MainActivity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

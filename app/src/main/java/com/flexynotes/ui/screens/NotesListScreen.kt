@@ -72,6 +72,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.flexynotes.app.R
 import com.flexynotes.viewmodel.NotesViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -83,7 +84,7 @@ fun NotesListScreen(
     onNavigateToEditor: (Long?, Boolean) -> Unit,
     onOpenDrawer: () -> Unit
 ) {
-    val notes by viewModel.activeNotes.collectAsState()
+    val notes by viewModel.activeNotes.collectAsStateWithLifecycle()
     var selectedNoteIds by remember { mutableStateOf(setOf<Long>()) }
     var showFabMenu by remember { mutableStateOf(false) }
 
