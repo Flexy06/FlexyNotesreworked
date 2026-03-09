@@ -19,7 +19,7 @@ class ReminderManager @Inject constructor(
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
         val intent = Intent(context, ReminderReceiver::class.java).apply {
-            action = "com.example.FlexyNotes.REMINDER"
+            action = "com.flexynotes.FlexyNotes.REMINDER"
             putExtra("NOTE_ID", noteId)
             putExtra("NOTE_TITLE", title)
             putExtra("NOTE_CONTENT", content)

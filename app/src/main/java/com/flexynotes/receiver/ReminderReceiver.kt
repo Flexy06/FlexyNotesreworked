@@ -1,5 +1,6 @@
 package com.flexynotes.receiver
 
+import android.R
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -11,7 +12,6 @@ import android.os.Build
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import com.flexynotes.app.MainActivity
-
 
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -52,7 +52,7 @@ class ReminderReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val safeIcon = android.R.drawable.ic_dialog_info
+        val safeIcon = R.drawable.ic_dialog_info
 
         val notification = NotificationCompat.Builder(context, "reminders")
             .setSmallIcon(safeIcon)

@@ -18,7 +18,7 @@ object AppModule {
     @Provides
     @Singleton
     fun provideNoteDatabase(@ApplicationContext context: Context): NoteDatabase {
-        return NoteDatabase.getDatabase(context)
+        return NoteDatabase.Companion.getDatabase(context)
     }
 
     // Tells Hilt how to extract the NoteDao from the database

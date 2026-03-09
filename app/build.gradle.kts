@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    // Changed from com.example.FlexyNotes
+    // Changed from com.flexynotes.FlexyNotes
     namespace = "com.flexynotes.app"
     compileSdk = 35
 
