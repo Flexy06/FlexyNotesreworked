@@ -93,6 +93,10 @@ import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 import java.util.UUID
+import android.widget.Toast
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
+import com.flexynotes.viewmodel.UiEvent
 
 class ChecklistItemState(
     initialText: String,
@@ -140,6 +144,16 @@ fun NoteEditorScreen(
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
 
+    LaunchedEffect(Unit) {
+        viewModel.uiEvent.collect { event ->
+            when (event) {
+                is UiEvent.ShowToast -> {
+                    Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -169,18 +183,16 @@ fun NoteEditorScreen(
                 )
             }
         } else {
-            if (titleText.isNotBlank() || contentText.isNotBlank()) {
-                viewModel.addNote(titleText, contentText, currentIsChecklist, reminderTime)
-                existingNote = NoteEntity(
-                    id = -1L,
-                    title = titleText,
-                    content = contentText,
-                    isChecklist = currentIsChecklist,
-                    reminderTime = reminderTime,
-                    createdAt = System.currentTimeMillis(),
-                    modifiedAt = System.currentTimeMillis()
-                )
-            }
+            viewModel.addNote(titleText, contentText, currentIsChecklist, reminderTime)
+            existingNote = NoteEntity(
+                id = -1L,
+                title = titleText,
+                content = contentText,
+                isChecklist = currentIsChecklist,
+                reminderTime = reminderTime,
+                createdAt = System.currentTimeMillis(),
+                modifiedAt = System.currentTimeMillis()
+            )
         }
     }
 
@@ -522,7 +534,9 @@ fun NoteEditorScreen(
                     checklistItems.forEachIndexed { index, item ->
                         val itemFocusRequester = remember(item.id) { FocusRequester() }
                         checklistFocusRequesters[item.id] = itemFocusRequester
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)) {
                             Checkbox(checked = item.isChecked, onCheckedChange = {
                                 item.isChecked = it
                                 if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -540,7 +554,10 @@ fun NoteEditorScreen(
                                 },
                                 textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface, textDecoration = if (item.isChecked) TextDecoration.LineThrough else null),
                                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                                modifier = Modifier.weight(1f).padding(horizontal = 8.dp).focusRequester(itemFocusRequester)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(horizontal = 8.dp)
+                                    .focusRequester(itemFocusRequester)
                             )
                             IconButton(onClick = { checklistItems.removeAt(index) }) {
                                 Icon(Icons.Default.Close, contentDescription = "Remove item", tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -561,7 +578,10 @@ fun NoteEditorScreen(
             } else {
                 BasicTextField(
                     state = contentState,
-                    modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 400.dp).focusRequester(contentFocusRequester),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(minHeight = 400.dp)
+                        .focusRequester(contentFocusRequester),
                     textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                     decorator = { innerTextField ->

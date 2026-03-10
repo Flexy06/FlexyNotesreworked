@@ -6,11 +6,18 @@ import com.flexynotes.data.NoteEntity
 import com.flexynotes.domain.usecase.*
 import com.flexynotes.util.ReminderManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+// Define sealed class for one-time UI events
+sealed class UiEvent {
+    data class ShowToast(val message: String) : UiEvent()
+}
 
 @HiltViewModel
 class NotesViewModel @Inject constructor(
@@ -28,6 +35,10 @@ class NotesViewModel @Inject constructor(
     private val clearTrashUseCase: ClearTrashUseCase,
     private val reminderManager: ReminderManager
 ) : ViewModel() {
+
+    // Set up the event channel
+    private val _uiEvent = Channel<UiEvent>()
+    val uiEvent = _uiEvent.receiveAsFlow()
 
     val activeNotes: StateFlow<List<NoteEntity>> = getActiveNotesUseCase()
         .stateIn(
@@ -73,7 +84,8 @@ class NotesViewModel @Inject constructor(
                     reminderManager.scheduleReminder(id, title, content, validReminderTime)
                 }
             } catch (e: IllegalArgumentException) {
-                // Ignore empty notes
+                // Trigger toast event if note is completely empty
+                _uiEvent.send(UiEvent.ShowToast("Cannot save an empty note"))
             }
         }
     }
