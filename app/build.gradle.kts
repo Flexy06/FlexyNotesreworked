@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.myComposePlugin)
     alias(libs.plugins.myKspPlugin)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -94,4 +95,6 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
 
     implementation(libs.androidx.lifecycle.runtime.compose)
+
+    implementation(libs.kotlinx.serialization.json)
 }
