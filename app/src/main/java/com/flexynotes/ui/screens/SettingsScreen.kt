@@ -31,6 +31,8 @@ import com.flexynotes.util.CrashReporter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+
+
 fun SettingsScreen(
     preferences: UserPreferences,
     onUpdatePreferences: ((UserPreferences) -> UserPreferences) -> Unit,
@@ -39,6 +41,15 @@ fun SettingsScreen(
 ) {
     val scrollState = rememberScrollState()
     val context = LocalContext.current
+    // Fetch the app version dynamically from the package manager
+    val appVersion = remember {
+        try {
+            val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            packageInfo.versionName ?: "Unknown"
+        } catch (e: Exception) {
+            "Unknown"
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -215,7 +226,7 @@ fun SettingsScreen(
             SettingsGroup(title = stringResource(R.string.settings_about)) {
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.settings_version)) },
-                    supportingContent = { Text("v1.1.2") },
+                    supportingContent = { Text("v.$appVersion") },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                 )
             }

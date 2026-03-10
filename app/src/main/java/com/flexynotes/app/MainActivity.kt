@@ -72,6 +72,7 @@ class MainActivity : AppCompatActivity() {
         setTheme(androidx.appcompat.R.style.Theme_AppCompat_DayNight_NoActionBar)
 
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
 
         setContent {
             val mainViewModel: MainViewModel = hiltViewModel()
@@ -99,21 +100,23 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-
             val isSystemDark = isSystemInDarkTheme()
-            val isDarkTheme = when (preferences.themeMode) {
-                ThemeMode.SYSTEM -> isSystemDark
+            val isDarkMode = when (preferences.themeMode) {
                 ThemeMode.LIGHT -> false
                 ThemeMode.DARK -> true
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
             }
 
-            LaunchedEffect(isDarkTheme) {
-                enableEdgeToEdge(
-                    statusBarStyle = if (isDarkTheme) SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
-                    else SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
-                    navigationBarStyle = if (isDarkTheme) SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
-                    else SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
-                )
+            LaunchedEffect(isDarkMode) {
+                val statusBarStyle = if (isDarkMode) {
+                    SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+                } else {
+                    SystemBarStyle.light(
+                        android.graphics.Color.TRANSPARENT,
+                        android.graphics.Color.TRANSPARENT
+                    )
+                }
+                enableEdgeToEdge(statusBarStyle = statusBarStyle)
             }
 
             DisposableEffect(lifecycleOwner) {
@@ -145,7 +148,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             FlexyNotesTheme(
-                darkTheme = isDarkTheme,
+                darkTheme = isDarkMode,
                 dynamicColor = preferences.useDynamicColor,
                 isOledMode = preferences.isOledMode
             ) {
