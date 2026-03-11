@@ -41,7 +41,8 @@ fun TrashScreen(
 ) {
     val deletedNotes by viewModel.deletedNotes.collectAsStateWithLifecycle()
 
-    var selectedNoteIds by remember { mutableStateOf(setOf<Long>()) }
+    // Changed Set<Long> to Set<String>
+    var selectedNoteIds by remember { mutableStateOf(setOf<String>()) }
     var showEmptyTrashDialog by remember { mutableStateOf(false) }
     var showDeleteSelectedDialog by remember { mutableStateOf(false) }
     var noteToDelete by remember { mutableStateOf<NoteEntity?>(null) }

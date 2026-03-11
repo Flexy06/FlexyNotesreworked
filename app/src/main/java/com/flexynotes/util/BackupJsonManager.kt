@@ -15,14 +15,20 @@ object BackupJsonManager {
 
     // Converts database entities to a formatted JSON string
     fun createJsonFromNotes(notes: List<NoteEntity>): String {
+        // In BackupJsonManager.kt -> createJsonFromNotes()
         val backupNotes = notes.map { entity ->
             BackupNote(
+                id = entity.id,
                 title = entity.title,
                 content = entity.content,
-                isChecklist = entity.isChecklist,
-                reminderTime = entity.reminderTime,
+                imageUri = entity.imageUri,
                 createdAt = entity.createdAt,
-                modifiedAt = entity.modifiedAt
+                modifiedAt = entity.modifiedAt,
+                colorArgb = entity.colorArgb,
+                isDeleted = entity.isDeleted,
+                isArchived = entity.isArchived,
+                isChecklist = entity.isChecklist,
+                reminderTime = entity.reminderTime
             )
         }
 

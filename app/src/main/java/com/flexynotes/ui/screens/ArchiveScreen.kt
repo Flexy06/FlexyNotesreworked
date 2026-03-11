@@ -42,10 +42,13 @@ fun ArchiveScreen(
     isGridView: Boolean,
     useHaptics: Boolean,
     onOpenDrawer: () -> Unit,
-    onNavigateToEditor: (Long) -> Unit
+    // Changed Long to String
+    onNavigateToEditor: (String) -> Unit
 ) {
     val archivedNotes by viewModel.archivedNotes.collectAsStateWithLifecycle()
-    var selectedNoteIds by remember { mutableStateOf(setOf<Long>()) }
+
+    // Changed Set<Long> to Set<String>
+    var selectedNoteIds by remember { mutableStateOf(setOf<String>()) }
     val haptic = LocalHapticFeedback.current
     val density = LocalDensity.current
     val minDragDistance = with(density) { 100.dp.toPx() }

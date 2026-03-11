@@ -81,11 +81,13 @@ fun NotesListScreen(
     isGridView: Boolean,
     useHaptics: Boolean,
     onGridViewToggle: () -> Unit,
-    onNavigateToEditor: (Long?, Boolean) -> Unit,
+    // Changed Long? to String?
+    onNavigateToEditor: (String?, Boolean) -> Unit,
     onOpenDrawer: () -> Unit
 ) {
     val notes by viewModel.activeNotes.collectAsStateWithLifecycle()
-    var selectedNoteIds by remember { mutableStateOf(setOf<Long>()) }
+    // Changed Set<Long> to Set<String>
+    var selectedNoteIds by remember { mutableStateOf(setOf<String>()) }
     var showFabMenu by remember { mutableStateOf(false) }
 
     var isSearching by remember { mutableStateOf(false) }
@@ -94,7 +96,7 @@ fun NotesListScreen(
 
     val haptic = LocalHapticFeedback.current
     val density = LocalDensity.current
-    val minDragDistance = with(density) { 100.dp.toPx() } // Mindest-Distanz gegen versehentliche Swipes
+    val minDragDistance = with(density) { 100.dp.toPx() }
 
     val displayedNotes = remember(notes, searchQuery) {
         if (searchQuery.isBlank()) {
@@ -154,7 +156,6 @@ fun NotesListScreen(
                     }
                 )
             } else {
-                // Fixed height to prevent layout shifts
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -192,7 +193,6 @@ fun NotesListScreen(
                                         }
                                     },
                                     trailingIcon = {
-                                        // Animate the clear text icon
                                         AnimatedVisibility(
                                             visible = searchQuery.isNotEmpty(),
                                             enter = fadeIn() + scaleIn(),
@@ -244,7 +244,6 @@ fun NotesListScreen(
                 Column(horizontalAlignment = Alignment.End) {
                     AnimatedVisibility(
                         visible = showFabMenu,
-                        // Scale from the bottom right corner (near the FAB)
                         enter = fadeIn() + scaleIn(
                             initialScale = 0.8f,
                             transformOrigin = TransformOrigin(1f, 1f)
@@ -321,11 +320,9 @@ fun NotesListScreen(
                             if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             showFabMenu = !showFabMenu
                         },
-                        // Change color when menu is open to indicate state
                         containerColor = if (showFabMenu) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.primaryContainer,
                         contentColor = if (showFabMenu) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onPrimaryContainer
                     ) {
-                        // Add spring animation for a bouncy rotation effect
                         val rotation by animateFloatAsState(
                             targetValue = if (showFabMenu) 45f else 0f,
                             animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
@@ -343,14 +340,12 @@ fun NotesListScreen(
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize()) {
 
-            // Determine the current UI state
             val contentState = when {
                 notes.isEmpty() -> "EMPTY"
                 displayedNotes.isEmpty() && isSearching -> "NO_RESULTS"
                 else -> "CONTENT"
             }
 
-            // Smoothly crossfade between states
             Crossfade(
                 targetState = contentState,
                 label = "content_crossfade",
@@ -528,7 +523,7 @@ fun NotesListScreen(
                                             Column(modifier = Modifier.padding(16.dp)) {
                                                 Text(
                                                     text = note.title.ifEmpty { stringResource(R.string.untitled) },
-                                                    style = MaterialTheme.typography.titleMedium, // Hier hat das Komma gefehlt
+                                                    style = MaterialTheme.typography.titleMedium,
                                                     maxLines = 2,
                                                     overflow = TextOverflow.Ellipsis
                                                 )
@@ -565,7 +560,6 @@ fun NotesListScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        // Allows dismissing the FAB menu by clicking outside without a dark overlay
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null

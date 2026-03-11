@@ -21,7 +21,7 @@ interface NoteDao {
     fun getDeletedNotes(): Flow<List<NoteEntity>>
 
     @Query("SELECT * FROM notes WHERE id = :noteId")
-    suspend fun getNoteById(noteId: Long): NoteEntity?
+    suspend fun getNoteById(noteId: String): NoteEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertNote(note: NoteEntity): Long

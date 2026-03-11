@@ -1,11 +1,14 @@
 package com.flexynotes.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flexynotes.data.NoteEntity
 import com.flexynotes.domain.usecase.*
 import com.flexynotes.util.ReminderManager
+import com.flexynotes.worker.SyncManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -14,13 +17,13 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-// Define sealed class for one-time UI events
 sealed class UiEvent {
     data class ShowToast(val message: String) : UiEvent()
 }
 
 @HiltViewModel
 class NotesViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val getActiveNotesUseCase: GetActiveNotesUseCase,
     private val getArchivedNotesUseCase: GetArchivedNotesUseCase,
     private val getDeletedNotesUseCase: GetDeletedNotesUseCase,
@@ -36,7 +39,6 @@ class NotesViewModel @Inject constructor(
     private val reminderManager: ReminderManager
 ) : ViewModel() {
 
-    // Set up the event channel
     private val _uiEvent = Channel<UiEvent>()
     val uiEvent = _uiEvent.receiveAsFlow()
 
@@ -61,7 +63,8 @@ class NotesViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    suspend fun getNoteById(id: Long): NoteEntity? {
+    // Changed ID type to String
+    suspend fun getNoteById(id: String): NoteEntity? {
         return getNoteByIdUseCase(id)
     }
 
@@ -79,12 +82,14 @@ class NotesViewModel @Inject constructor(
             )
 
             try {
-                val id = addNoteUseCase(newNote)
+                addNoteUseCase(newNote)
+
                 if (validReminderTime != null) {
-                    reminderManager.scheduleReminder(id, title, content, validReminderTime)
+                    // We extract the ID directly from the newly created NoteEntity
+                    reminderManager.scheduleReminder(newNote.id, title, content, validReminderTime)
                 }
+                SyncManager.triggerImmediateUpload(context)
             } catch (e: IllegalArgumentException) {
-                // Trigger toast event if note is completely empty
                 _uiEvent.send(UiEvent.ShowToast("Cannot save an empty note"))
             }
         }
@@ -109,30 +114,50 @@ class NotesViewModel @Inject constructor(
             } else if (note.reminderTime != null) {
                 reminderManager.cancelReminder(note.id)
             }
+
+            SyncManager.triggerImmediateUpload(context)
         }
     }
 
     fun archiveNote(note: NoteEntity) {
-        viewModelScope.launch { archiveNoteUseCase(note) }
+        viewModelScope.launch {
+            archiveNoteUseCase(note)
+            SyncManager.triggerImmediateUpload(context)
+        }
     }
 
     fun unarchiveNote(note: NoteEntity) {
-        viewModelScope.launch { unarchiveNoteUseCase(note) }
+        viewModelScope.launch {
+            unarchiveNoteUseCase(note)
+            SyncManager.triggerImmediateUpload(context)
+        }
     }
 
     fun moveToTrash(note: NoteEntity) {
-        viewModelScope.launch { moveToTrashUseCase(note) }
+        viewModelScope.launch {
+            moveToTrashUseCase(note)
+            SyncManager.triggerImmediateUpload(context)
+        }
     }
 
     fun restoreNote(note: NoteEntity) {
-        viewModelScope.launch { restoreNoteUseCase(note) }
+        viewModelScope.launch {
+            restoreNoteUseCase(note)
+            SyncManager.triggerImmediateUpload(context)
+        }
     }
 
     fun deletePermanently(note: NoteEntity) {
-        viewModelScope.launch { deletePermanentlyUseCase(note) }
+        viewModelScope.launch {
+            deletePermanentlyUseCase(note)
+            SyncManager.triggerImmediateUpload(context)
+        }
     }
 
     fun clearTrash() {
-        viewModelScope.launch { clearTrashUseCase() }
+        viewModelScope.launch {
+            clearTrashUseCase()
+            SyncManager.triggerImmediateUpload(context)
+        }
     }
 }

@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -86,6 +87,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.flexynotes.app.R
 import com.flexynotes.data.NoteEntity
 import com.flexynotes.viewmodel.NotesViewModel
+import com.flexynotes.viewmodel.UiEvent
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -93,10 +95,6 @@ import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 import java.util.UUID
-import android.widget.Toast
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.platform.LocalContext
-import com.flexynotes.viewmodel.UiEvent
 
 class ChecklistItemState(
     initialText: String,
@@ -111,7 +109,7 @@ class ChecklistItemState(
 @Composable
 fun NoteEditorScreen(
     viewModel: NotesViewModel,
-    noteId: Long?,
+    noteId: String?,
     isChecklist: Boolean,
     showTimestamp: Boolean,
     useHaptics: Boolean,
@@ -129,7 +127,7 @@ fun NoteEditorScreen(
 
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
-    var showMenu by remember { mutableStateOf(false) } // State for inline horizontal menu
+    var showMenu by remember { mutableStateOf(false) }
 
     val datePickerState = rememberDatePickerState()
     val timePickerState = rememberTimePickerState(
@@ -160,7 +158,6 @@ fun NoteEditorScreen(
         if (isGranted) showDatePicker = true
     }
 
-    // Handle auto-saving of notes
     val saveChanges = {
         val currentIsChecklist = existingNote?.isChecklist ?: isChecklist
         val titleText = titleState.text.toString().trimEnd()
@@ -185,7 +182,7 @@ fun NoteEditorScreen(
         } else {
             viewModel.addNote(titleText, contentText, currentIsChecklist, reminderTime)
             existingNote = NoteEntity(
-                id = -1L,
+                id = UUID.randomUUID().toString(),
                 title = titleText,
                 content = contentText,
                 isChecklist = currentIsChecklist,
@@ -205,7 +202,6 @@ fun NoteEditorScreen(
     val currentSaveChanges by rememberUpdatedState(saveChanges)
     val currentHandleBack by rememberUpdatedState(handleBack)
 
-    // Save changes automatically when the composable is disposed
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -231,7 +227,7 @@ fun NoteEditorScreen(
     }
 
     LaunchedEffect(noteId) {
-        if (noteId == null) {
+        if (noteId == null || noteId == "-1") {
             delay(100)
             if (!actualIsChecklist) {
                 try {
@@ -354,7 +350,6 @@ fun NoteEditorScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(horizontal = 4.dp)
                     ) {
-                        // Main action: Add Reminder
                         IconButton(onClick = {
                             if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -373,7 +368,6 @@ fun NoteEditorScreen(
                             )
                         }
 
-                        // Expanding actions menu
                         if (existingNote != null) {
                             AnimatedVisibility(
                                 visible = showMenu,
@@ -406,11 +400,10 @@ fun NoteEditorScreen(
                                         try {
                                             context.startActivity(shareIntent)
                                         } catch (e: android.content.ActivityNotFoundException) {
-                                            // Notify user if no suitable app is installed to handle the share action
-                                            android.widget.Toast.makeText(
+                                            Toast.makeText(
                                                 context,
                                                 "No app found to share this note.",
-                                                android.widget.Toast.LENGTH_SHORT
+                                                Toast.LENGTH_SHORT
                                             ).show()
                                         }
                                     }) {
@@ -422,7 +415,7 @@ fun NoteEditorScreen(
                                         showMenu = false
                                         currentSaveChanges()
                                         existingNote?.let {
-                                            if (it.id != -1L) viewModel.archiveNote(it)
+                                            viewModel.archiveNote(it)
                                         }
                                         onNavigateBack()
                                     }) {
@@ -434,7 +427,7 @@ fun NoteEditorScreen(
                                         showMenu = false
                                         currentSaveChanges()
                                         existingNote?.let {
-                                            if (it.id != -1L) viewModel.moveToTrash(it)
+                                            viewModel.moveToTrash(it)
                                         }
                                         onNavigateBack()
                                     }) {

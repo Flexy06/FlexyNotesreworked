@@ -15,7 +15,7 @@ import javax.inject.Singleton
 class ReminderManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    fun scheduleReminder(noteId: Long, title: String, content: String, timeInMillis: Long) {
+    fun scheduleReminder(noteId: String, title: String, content: String, timeInMillis: Long) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
         val intent = Intent(context, ReminderReceiver::class.java).apply {
@@ -59,7 +59,7 @@ class ReminderManager @Inject constructor(
         }
     }
 
-    fun cancelReminder(noteId: Long) {
+    fun cancelReminder(noteId: String) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, ReminderReceiver::class.java).apply {
             action = "com.flexynotes.REMINDER"

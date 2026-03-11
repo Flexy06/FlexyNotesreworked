@@ -14,7 +14,7 @@ class NoteRepository @Inject constructor(
     val archivedNotes: Flow<List<NoteEntity>> = noteDao.getArchivedNotes()
     val deletedNotes: Flow<List<NoteEntity>> = noteDao.getDeletedNotes()
 
-    suspend fun getNoteById(id: Long): NoteEntity? = noteDao.getNoteById(id)
+    suspend fun getNoteById(id: String): NoteEntity? = noteDao.getNoteById(id)
 
     suspend fun upsertNote(note: NoteEntity) = noteDao.insertNote(note)
 

@@ -2,11 +2,13 @@ package com.flexynotes.data
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import java.util.UUID
 
 @Entity(tableName = "notes")
 data class NoteEntity(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
+    // Generates a unique string ID automatically for every new note
+    @PrimaryKey
+    val id: String = UUID.randomUUID().toString(),
     val title: String,
     val content: String,
     val imageUri: String? = null,

@@ -64,14 +64,25 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.navigation.navDeepLink
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.flexynotes.worker.SyncManager
+
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+
         val splashScreen = installSplashScreen()
+
 
         setTheme(androidx.appcompat.R.style.Theme_AppCompat_DayNight_NoActionBar)
 
         super.onCreate(savedInstanceState)
+
+        // Start the 12h background loop
+        SyncManager.schedulePeriodicSync(this)
+
+        // Pull latest changes from cloud immediately on app open
+        SyncManager.triggerImmediateDownload(this)
+
         enableEdgeToEdge()
 
         setContent {
@@ -398,7 +409,8 @@ fun FlexyNotesNavigation(
                     useHaptics = preferences.useHaptics,
                     onGridViewToggle = { isGridView = !isGridView },
                     onNavigateToEditor = { noteId, isChecklist ->
-                        navController.navigate("note_editor/${noteId ?: -1L}?isChecklist=$isChecklist")
+                        // Changed -1L to "-1" (String)
+                        navController.navigate("note_editor/${noteId ?: "-1"}?isChecklist=$isChecklist")
                     },
                     onOpenDrawer = { scope.launch { drawerState.open() } }
                 )
@@ -459,8 +471,9 @@ fun FlexyNotesNavigation(
                 }
             ) { backStackEntry ->
                 val viewModel: NotesViewModel = hiltViewModel()
-                val noteIdStr = backStackEntry.arguments?.getString("noteId")
-                val noteId = noteIdStr?.toLongOrNull()?.takeIf { it != -1L }
+
+                // Directly use the string, and treat "-1" as a null/new note
+                val noteId = backStackEntry.arguments?.getString("noteId")?.takeIf { it != "-1" }
                 val isChecklist = backStackEntry.arguments?.getBoolean("isChecklist") ?: false
 
                 NoteEditorScreen(
