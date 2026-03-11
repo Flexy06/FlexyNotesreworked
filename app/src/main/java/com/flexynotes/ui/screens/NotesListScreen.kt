@@ -73,6 +73,10 @@ import androidx.compose.ui.zIndex
 import com.flexynotes.app.R
 import com.flexynotes.viewmodel.NotesViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
+import com.flexynotes.worker.SyncManager
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -96,6 +100,7 @@ fun NotesListScreen(
 
     val haptic = LocalHapticFeedback.current
     val density = LocalDensity.current
+    val context = LocalContext.current
     val minDragDistance = with(density) { 100.dp.toPx() }
 
     val displayedNotes = remember(notes, searchQuery) {
@@ -132,6 +137,7 @@ fun NotesListScreen(
         topBar = {
             if (selectedNoteIds.isNotEmpty()) {
                 TopAppBar(
+
                     title = { Text(stringResource(R.string.selected_count, selectedNoteIds.size)) },
                     navigationIcon = {
                         IconButton(onClick = { selectedNoteIds = emptySet() }) {
@@ -223,6 +229,7 @@ fun NotesListScreen(
                                     }
                                 },
                                 actions = {
+
                                     IconButton(onClick = { isSearching = true }) {
                                         Icon(Icons.Default.Search, contentDescription = "Search notes")
                                     }
@@ -232,7 +239,20 @@ fun NotesListScreen(
                                             contentDescription = "Toggle view"
                                         )
                                     }
+
+                                    IconButton(onClick = {
+                                        if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+
+                                        // Feuert direkt einen Download und Upload ab
+                                        SyncManager.triggerImmediateDownload(context)
+                                        SyncManager.triggerImmediateUpload(context)
+
+                                        Toast.makeText(context, "Syncing...", Toast.LENGTH_SHORT).show()
+                                    }) {
+                                        Icon(Icons.Default.Sync, contentDescription = "Sync Now")
+                                    }
                                 }
+
                             )
                         }
                     }

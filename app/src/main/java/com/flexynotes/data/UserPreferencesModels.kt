@@ -17,5 +17,6 @@ data class UserPreferences(
     val askForCrashReports: Boolean = true,
     val webDavUrl: String = "",
     val webDavUsername: String = "",
-    val webDavPassword: String = ""
+    val webDavPassword: String = "",
+    val isAutoSyncEnabled: Boolean = false,
 )

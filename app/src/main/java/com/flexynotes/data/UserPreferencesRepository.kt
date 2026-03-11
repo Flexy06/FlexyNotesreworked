@@ -12,6 +12,8 @@ import javax.inject.Singleton
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
+private val AUTO_SYNC_ENABLED = booleanPreferencesKey("auto_sync_enabled")
+
 @Singleton
 class UserPreferencesRepository @Inject constructor(
     @ApplicationContext private val context: Context
@@ -50,7 +52,8 @@ class UserPreferencesRepository @Inject constructor(
                 // Read WebDAV credentials
                 webDavUrl = preferences[WEBDAV_URL] ?: "",
                 webDavUsername = preferences[WEBDAV_USERNAME] ?: "",
-                webDavPassword = preferences[WEBDAV_PASSWORD] ?: ""
+                webDavPassword = preferences[WEBDAV_PASSWORD] ?: "",
+                isAutoSyncEnabled = preferences[AUTO_SYNC_ENABLED] ?: false,
             )
         }
 
@@ -90,6 +93,8 @@ class UserPreferencesRepository @Inject constructor(
             preferences[WEBDAV_URL] = updated.webDavUrl
             preferences[WEBDAV_USERNAME] = updated.webDavUsername
             preferences[WEBDAV_PASSWORD] = updated.webDavPassword
+
+            preferences[AUTO_SYNC_ENABLED] = updated.isAutoSyncEnabled
         }
     }
 }

@@ -12,6 +12,8 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
 
+import android.util.Log
+
 @HiltWorker
 class SyncWorker @AssistedInject constructor(
     @Assisted appContext: Context,
@@ -21,6 +23,7 @@ class SyncWorker @AssistedInject constructor(
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
+        Log.d("SyncWorker", "WorkManager hat den SyncWorker erfolgreich gestartet!")
         val preferences = preferencesRepository.userPreferencesFlow.first()
         val secureStorage = SecureStorageManager(applicationContext)
         val webDavManager = WebDavManager()

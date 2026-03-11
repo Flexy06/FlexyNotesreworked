@@ -34,4 +34,7 @@ interface NoteDao {
 
     @Query("DELETE FROM notes WHERE isDeleted = 1")
     suspend fun clearTrash()
+
+    @Query("SELECT * FROM notes")
+    suspend fun getAllNotesForBackup(): List<NoteEntity>
 }

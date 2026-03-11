@@ -72,16 +72,10 @@ class MainActivity : AppCompatActivity() {
 
         val splashScreen = installSplashScreen()
 
-
         setTheme(androidx.appcompat.R.style.Theme_AppCompat_DayNight_NoActionBar)
 
         super.onCreate(savedInstanceState)
 
-        // Start the 12h background loop
-        SyncManager.schedulePeriodicSync(this)
-
-        // Pull latest changes from cloud immediately on app open
-        SyncManager.triggerImmediateDownload(this)
 
         enableEdgeToEdge()
 
@@ -93,21 +87,39 @@ class MainActivity : AppCompatActivity() {
             var showPromptTrigger by remember { mutableStateOf(true) }
             var isDataStoreLoaded by rememberSaveable { mutableStateOf(false) }
 
+            // Prevent multiple initial downloads during recompositions
+            var hasTriggeredInitialSync by rememberSaveable { mutableStateOf(false) }
+
             val lifecycleOwner = LocalLifecycleOwner.current
             val context = LocalContext.current
 
-            // Crash Log State
             var crashLog by remember { mutableStateOf<String?>(null) }
 
             splashScreen.setKeepOnScreenCondition { !isDataStoreLoaded }
 
             LaunchedEffect(Unit) {
-                // Check for existing crash log on app start
                 crashLog = CrashReporter.getCrashLog(context)
 
                 if (!isDataStoreLoaded) {
                     delay(100)
                     isDataStoreLoaded = true
+                }
+            }
+
+            // Sync logic based on user preferences
+            LaunchedEffect(isDataStoreLoaded, preferences.isAutoSyncEnabled) {
+                if (isDataStoreLoaded) {
+                    if (preferences.isAutoSyncEnabled) {
+                        SyncManager.schedulePeriodicSync(context)
+                        // Trigger download only once per app session
+                        if (!hasTriggeredInitialSync) {
+                            SyncManager.triggerImmediateDownload(context)
+                            hasTriggeredInitialSync = true
+                        }
+                    } else {
+                        // Ensure background tasks are stopped when user toggles off
+                        SyncManager.cancelPeriodicSync(context)
+                    }
                 }
             }
 
@@ -200,7 +212,6 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                // --- Crash Log Dialog Overlay ---
                 if (crashLog != null) {
                     if (preferences.askForCrashReports) {
                         AlertDialog(
@@ -236,7 +247,6 @@ class MainActivity : AppCompatActivity() {
                             }
                         )
                     } else {
-                        // User opted out in settings: clear silently
                         CrashReporter.clearCrashLog(context)
                         crashLog = null
                     }
@@ -283,7 +293,6 @@ fun FlexyNotesNavigation(
 
     var isGridView by rememberSaveable { mutableStateOf(true) }
     val gesturesEnabled = currentRoute.startsWith("note_editor") == false
-    // Track swipe edge passively to preserve NavHost interactive animations
     var lastBackEdge by remember { mutableIntStateOf(0) }
 
     ModalNavigationDrawer(
@@ -409,7 +418,6 @@ fun FlexyNotesNavigation(
                     useHaptics = preferences.useHaptics,
                     onGridViewToggle = { isGridView = !isGridView },
                     onNavigateToEditor = { noteId, isChecklist ->
-                        // Changed -1L to "-1" (String)
                         navController.navigate("note_editor/${noteId ?: "-1"}?isChecklist=$isChecklist")
                     },
                     onOpenDrawer = { scope.launch { drawerState.open() } }
@@ -472,7 +480,6 @@ fun FlexyNotesNavigation(
             ) { backStackEntry ->
                 val viewModel: NotesViewModel = hiltViewModel()
 
-                // Directly use the string, and treat "-1" as a null/new note
                 val noteId = backStackEntry.arguments?.getString("noteId")?.takeIf { it != "-1" }
                 val isChecklist = backStackEntry.arguments?.getBoolean("isChecklist") ?: false
 

@@ -61,4 +61,9 @@ object SyncManager {
             downloadRequest
         )
     }
+
+    // 4. Cancel periodic sync
+    fun cancelPeriodicSync(context: Context) {
+        WorkManager.getInstance(context).cancelUniqueWork(SYNC_WORK_NAME)
+    }
 }
