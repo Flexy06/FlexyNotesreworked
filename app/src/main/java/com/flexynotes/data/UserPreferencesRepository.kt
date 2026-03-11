@@ -27,6 +27,10 @@ class UserPreferencesRepository @Inject constructor(
         val IS_APP_LOCK_ENABLED = booleanPreferencesKey("is_app_lock_enabled")
         val LANGUAGE = stringPreferencesKey("language")
         val ASK_FOR_CRASH_REPORTS = booleanPreferencesKey("ask_for_crash_reports")
+
+        val WEBDAV_URL = stringPreferencesKey("webdav_url")
+        val WEBDAV_USERNAME = stringPreferencesKey("webdav_username")
+        val WEBDAV_PASSWORD = stringPreferencesKey("webdav_password")
     }
 
     val userPreferencesFlow: Flow<UserPreferences> = context.dataStore.data
@@ -41,7 +45,12 @@ class UserPreferencesRepository @Inject constructor(
                 isSecureMode = preferences[IS_SECURE_MODE] ?: false,
                 isAppLockEnabled = preferences[IS_APP_LOCK_ENABLED] ?: false,
                 language = AppLanguage.valueOf(preferences[LANGUAGE] ?: AppLanguage.SYSTEM.name),
-                askForCrashReports = preferences[ASK_FOR_CRASH_REPORTS] ?: true
+                askForCrashReports = preferences[ASK_FOR_CRASH_REPORTS] ?: true,
+
+                // Read WebDAV credentials
+                webDavUrl = preferences[WEBDAV_URL] ?: "",
+                webDavUsername = preferences[WEBDAV_USERNAME] ?: "",
+                webDavPassword = preferences[WEBDAV_PASSWORD] ?: ""
             )
         }
 
@@ -57,7 +66,12 @@ class UserPreferencesRepository @Inject constructor(
                 isSecureMode = preferences[IS_SECURE_MODE] ?: false,
                 isAppLockEnabled = preferences[IS_APP_LOCK_ENABLED] ?: false,
                 language = AppLanguage.valueOf(preferences[LANGUAGE] ?: AppLanguage.SYSTEM.name),
-                askForCrashReports = preferences[ASK_FOR_CRASH_REPORTS] ?: true
+                askForCrashReports = preferences[ASK_FOR_CRASH_REPORTS] ?: true,
+
+                // Map current WebDAV credentials
+                webDavUrl = preferences[WEBDAV_URL] ?: "",
+                webDavUsername = preferences[WEBDAV_USERNAME] ?: "",
+                webDavPassword = preferences[WEBDAV_PASSWORD] ?: ""
             )
             val updated = update(current)
 
@@ -71,6 +85,11 @@ class UserPreferencesRepository @Inject constructor(
             preferences[IS_APP_LOCK_ENABLED] = updated.isAppLockEnabled
             preferences[LANGUAGE] = updated.language.name
             preferences[ASK_FOR_CRASH_REPORTS] = updated.askForCrashReports
+
+            // Write WebDAV credentials
+            preferences[WEBDAV_URL] = updated.webDavUrl
+            preferences[WEBDAV_USERNAME] = updated.webDavUsername
+            preferences[WEBDAV_PASSWORD] = updated.webDavPassword
         }
     }
 }

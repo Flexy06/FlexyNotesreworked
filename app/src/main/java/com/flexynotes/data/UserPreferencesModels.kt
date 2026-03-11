@@ -14,5 +14,8 @@ data class UserPreferences(
     val isSecureMode: Boolean = false,
     val isAppLockEnabled: Boolean = false,
     val language: AppLanguage = AppLanguage.SYSTEM,
-    val askForCrashReports: Boolean = true
+    val askForCrashReports: Boolean = true,
+    val webDavUrl: String = "",
+    val webDavUsername: String = "",
+    val webDavPassword: String = ""
 )

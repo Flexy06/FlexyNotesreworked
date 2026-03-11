@@ -28,9 +28,14 @@ import com.flexynotes.data.SortOrder
 import com.flexynotes.data.ThemeMode
 import com.flexynotes.data.UserPreferences
 import com.flexynotes.util.CrashReporter
-
-// Add the import for your new BackupDialog
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.material3.OutlinedTextField
 import com.flexynotes.ui.BackupDialog
+import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material3.CircularProgressIndicator
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.invoke
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +48,7 @@ fun SettingsScreen(
     val scrollState = rememberScrollState()
     val context = LocalContext.current
     var showBackupDialog by remember { mutableStateOf(false) }
+    var showWebDavDialog by remember { mutableStateOf(false) }
 
     // Fetch the app version dynamically from the package manager
     val appVersion = remember {
@@ -212,6 +218,27 @@ fun SettingsScreen(
                     }
                 }
 
+                SettingsGroup(title = "Cloud Sync (WebDAV)") {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showWebDavDialog = true }
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Configure WebDAV", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                            Text(
+                                text = if (preferences.webDavUrl.isNotEmpty()) "Configured" else "Not configured",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Icon(Icons.Default.CloudUpload, contentDescription = "WebDAV Setup", tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(24.dp))
 
                 SettingsGroup(title = stringResource(R.string.settings_advanced)) {
@@ -258,7 +285,26 @@ fun SettingsScreen(
 
             // Placed the dialog securely outside the scrollable column for better rendering
             if (showBackupDialog) {
-                BackupDialog(onDismiss = { showBackupDialog = false })
+                BackupDialog(
+                    preferences = preferences, // <--- Diese Zeile hinzufügen
+                    onDismiss = { showBackupDialog = false }
+                )
+            }
+
+            if (showWebDavDialog) {
+                WebDavConfigDialog(
+                    preferences = preferences,
+                    onSave = { newUrl, newUser, newPass ->
+                        onUpdatePreferences {
+                            it.copy(
+                                webDavUrl = newUrl,
+                                webDavUsername = newUser,
+                                webDavPassword = newPass
+                            )
+                        }
+                    },
+                    onDismiss = { showWebDavDialog = false }
+                )
             }
         }
     }
@@ -340,4 +386,110 @@ private fun <T> ListPreference(
             confirmButton = { TextButton(onClick = { showDialog = false }) { Text(stringResource(R.string.cancel)) } }
         )
     }
+}
+
+@Composable
+fun WebDavConfigDialog(
+    preferences: UserPreferences,
+    onSave: (String, String, String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
+    // Local state for smooth typing
+    var url by remember { mutableStateOf(preferences.webDavUrl) }
+    var username by remember { mutableStateOf(preferences.webDavUsername) }
+    var password by remember { mutableStateOf(preferences.webDavPassword) }
+    var isTesting by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Cloud Sync (WebDAV)") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    label = { Text("Server URL") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = username,
+                    onValueChange = { username = it },
+                    label = { Text("Username") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("App Password") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    visualTransformation = PasswordVisualTransformation()
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Test Connection Button
+                Button(
+                    onClick = {
+                        if (url.isNotBlank() && username.isNotBlank() && password.isNotBlank()) {
+                            isTesting = true
+                            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                val webDavManager = com.flexynotes.util.WebDavManager()
+                                // Send a simple test file
+                                val result = webDavManager.uploadBackup(
+                                    serverUrl = url,
+                                    username = username,
+                                    appPassword = password,
+                                    fileName = "flexynotes_test.txt",
+                                    encryptedPayload = "Hello from FlexyNotes! Connection is working."
+                                )
+
+                                kotlinx.coroutines.Dispatchers.Main.invoke {
+                                    isTesting = false
+                                    if (result.isSuccess) {
+                                        Toast.makeText(context, "Connection successful!", Toast.LENGTH_LONG).show()
+                                    } else {
+                                        val errorMsg = result.exceptionOrNull()?.message ?: "Unknown error"
+                                        Toast.makeText(context, "Failed: $errorMsg", Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            }
+                        } else {
+                            Toast.makeText(context, "Please fill in all fields first", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isTesting
+                ) {
+                    if (isTesting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text("Test Connection")
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                onSave(url, username, password)
+                onDismiss()
+            }) {
+                Text(stringResource(R.string.save, "Save"))
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
 }
