@@ -11,7 +11,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
-
 private val AUTO_SYNC_ENABLED = booleanPreferencesKey("auto_sync_enabled")
 
 @Singleton
@@ -33,6 +32,9 @@ class UserPreferencesRepository @Inject constructor(
         val WEBDAV_URL = stringPreferencesKey("webdav_url")
         val WEBDAV_USERNAME = stringPreferencesKey("webdav_username")
         val WEBDAV_PASSWORD = stringPreferencesKey("webdav_password")
+
+        val IS_WEBDAV_SYNC_ENABLED = booleanPreferencesKey("is_webdav_sync_enabled")
+        val IS_GOOGLE_DRIVE_SYNC_ENABLED = booleanPreferencesKey("is_google_drive_sync_enabled")
     }
 
     val userPreferencesFlow: Flow<UserPreferences> = context.dataStore.data
@@ -54,6 +56,9 @@ class UserPreferencesRepository @Inject constructor(
                 webDavUsername = preferences[WEBDAV_USERNAME] ?: "",
                 webDavPassword = preferences[WEBDAV_PASSWORD] ?: "",
                 isAutoSyncEnabled = preferences[AUTO_SYNC_ENABLED] ?: false,
+
+                isWebDavSyncEnabled = preferences[IS_WEBDAV_SYNC_ENABLED] ?: false,
+                isGoogleDriveSyncEnabled = preferences[IS_GOOGLE_DRIVE_SYNC_ENABLED] ?: false
             )
         }
 
@@ -74,7 +79,11 @@ class UserPreferencesRepository @Inject constructor(
                 // Map current WebDAV credentials
                 webDavUrl = preferences[WEBDAV_URL] ?: "",
                 webDavUsername = preferences[WEBDAV_USERNAME] ?: "",
-                webDavPassword = preferences[WEBDAV_PASSWORD] ?: ""
+                webDavPassword = preferences[WEBDAV_PASSWORD] ?: "",
+                isAutoSyncEnabled = preferences[AUTO_SYNC_ENABLED] ?: false,
+
+                isWebDavSyncEnabled = preferences[IS_WEBDAV_SYNC_ENABLED] ?: false,
+                isGoogleDriveSyncEnabled = preferences[IS_GOOGLE_DRIVE_SYNC_ENABLED] ?: false
             )
             val updated = update(current)
 
@@ -93,8 +102,10 @@ class UserPreferencesRepository @Inject constructor(
             preferences[WEBDAV_URL] = updated.webDavUrl
             preferences[WEBDAV_USERNAME] = updated.webDavUsername
             preferences[WEBDAV_PASSWORD] = updated.webDavPassword
-
             preferences[AUTO_SYNC_ENABLED] = updated.isAutoSyncEnabled
+
+            preferences[IS_WEBDAV_SYNC_ENABLED] = updated.isWebDavSyncEnabled
+            preferences[IS_GOOGLE_DRIVE_SYNC_ENABLED] = updated.isGoogleDriveSyncEnabled
         }
     }
 }

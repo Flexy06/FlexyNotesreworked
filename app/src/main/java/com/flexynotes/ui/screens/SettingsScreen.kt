@@ -36,7 +36,7 @@ import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material3.CircularProgressIndicator
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.invoke
-import com.flexynotes.worker.SyncManager // <-- NEU: Import für den SyncManager
+import com.flexynotes.worker.SyncManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,9 +49,10 @@ fun SettingsScreen(
     val scrollState = rememberScrollState()
     val context = LocalContext.current
     var showBackupDialog by remember { mutableStateOf(false) }
-    var showWebDavDialog by remember { mutableStateOf(false) }
 
-    // Fetch the app version dynamically from the package manager
+    // State to toggle the new Cloud Sync Screen
+    var showCloudSyncScreen by remember { mutableStateOf(false) }
+
     val appVersion = remember {
         try {
             val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
@@ -59,6 +60,16 @@ fun SettingsScreen(
         } catch (e: Exception) {
             "Unknown"
         }
+    }
+
+    // If true, render the new CloudSyncScreen instead of the regular settings
+    if (showCloudSyncScreen) {
+        CloudSyncScreen(
+            preferences = preferences,
+            onUpdatePreferences = onUpdatePreferences,
+            onNavigateBack = { showCloudSyncScreen = false }
+        )
+        return // Stop rendering the rest of the SettingsScreen
     }
 
     Scaffold(
@@ -201,6 +212,7 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 SettingsGroup(title = "Backup & Restore") {
+                    // Local Backup Option
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -210,52 +222,26 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Encrypted Local Backup", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
-                            Text("Export or import notes securely", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Manual Backup & Restore", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                            Text("Create or load local and cloud backups manually", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Icon(Icons.Default.Lock, contentDescription = "Backup", tint = MaterialTheme.colorScheme.primary)
                     }
-                }
 
-                // Cloud Sync Group
-                SettingsGroup(title = "Cloud Sync (WebDAV)") {
+                    // Cloud Sync Option
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { showWebDavDialog = true }
+                            .clickable { showCloudSyncScreen = true } // HIER ist der Klick definiert
                             .padding(horizontal = 16.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Configure WebDAV", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
-                            Text(
-                                text = if (preferences.webDavUrl.isNotEmpty()) "Configured" else "Not configured",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Text("Manage Cloud Sync", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                            Text("WebDAV, Google Drive & Auto-Sync", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        Icon(Icons.Default.CloudUpload, contentDescription = "WebDAV Setup", tint = MaterialTheme.colorScheme.primary)
-                    }
-
-                    if (preferences.webDavUrl.isNotEmpty()) {
-                        SwitchPreference(
-                            title = "Enable Auto-Sync",
-                            subtitle = "Sync notes automatically in the background",
-                            checked = preferences.isAutoSyncEnabled,
-                            onCheckedChange = { isEnabled ->
-                                onUpdatePreferences { it.copy(isAutoSyncEnabled = isEnabled) }
-
-                                if (isEnabled) {
-                                    SyncManager.schedulePeriodicSync(context)
-                                    SyncManager.triggerImmediateDownload(context)
-                                    Toast.makeText(context, "Auto-Sync enabled", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    SyncManager.cancelPeriodicSync(context)
-                                    Toast.makeText(context, "Auto-Sync disabled", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        )
+                        Icon(Icons.Default.CloudUpload, contentDescription = "Cloud Settings", tint = MaterialTheme.colorScheme.primary)
                     }
                 }
 
@@ -309,29 +295,10 @@ fun SettingsScreen(
                     onDismiss = { showBackupDialog = false }
                 )
             }
-
-            if (showWebDavDialog) {
-                WebDavConfigDialog(
-                    preferences = preferences,
-                    // NEU: 4 Parameter statt 3
-                    onSave = { newUrl, newUser, newPass, newSyncPass ->
-                        onUpdatePreferences {
-                            it.copy(
-                                webDavUrl = newUrl,
-                                webDavUsername = newUser,
-                                webDavPassword = newPass
-                            )
-                        }
-                        // NEU: Das Verschlüsselungspasswort direkt im SecureStorage speichern
-                        val secureStorage = com.flexynotes.util.SecureStorageManager(context)
-                        secureStorage.saveSyncPassword(newSyncPass)
-                    },
-                    onDismiss = { showWebDavDialog = false }
-                )
-            }
         }
     }
 }
+
 @Composable
 private fun SettingsGroup(title: String, content: @Composable () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -408,130 +375,4 @@ private fun <T> ListPreference(
             confirmButton = { TextButton(onClick = { showDialog = false }) { Text(stringResource(R.string.cancel)) } }
         )
     }
-}
-
-@Composable
-fun WebDavConfigDialog(
-    preferences: UserPreferences,
-    // NEU: Die Funktion erwartet jetzt 4 Strings
-    onSave: (String, String, String, String) -> Unit,
-    onDismiss: () -> Unit
-) {
-    val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-    // Den SecureStorage laden, um ein evtl. schon gespeichertes Passwort anzuzeigen
-    val secureStorage = remember { com.flexynotes.util.SecureStorageManager(context) }
-
-    var url by remember { mutableStateOf(preferences.webDavUrl) }
-    var username by remember { mutableStateOf(preferences.webDavUsername) }
-    var password by remember { mutableStateOf(preferences.webDavPassword) }
-    // NEU: State für das Sync-Passwort
-    var syncPassword by remember { mutableStateOf(secureStorage.getSyncPassword() ?: "") }
-
-    var isTesting by remember { mutableStateOf(false) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Cloud Sync (WebDAV)") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = url,
-                    onValueChange = { url = it },
-                    label = { Text("Server URL") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = username,
-                    onValueChange = { username = it },
-                    label = { Text("Username") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = { Text("App Password") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    visualTransformation = PasswordVisualTransformation()
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-                HorizontalDivider()
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // NEU: Eingabefeld für das Verschlüsselungspasswort
-                OutlinedTextField(
-                    value = syncPassword,
-                    onValueChange = { syncPassword = it },
-                    label = { Text("Encryption Password") },
-                    supportingText = { Text("Used to encrypt your notes before upload") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    visualTransformation = PasswordVisualTransformation()
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(
-                    onClick = {
-                        // NEU: Prüfen, ob auch das 4. Feld ausgefüllt ist
-                        if (url.isNotBlank() && username.isNotBlank() && password.isNotBlank() && syncPassword.isNotBlank()) {
-                            isTesting = true
-                            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                                val webDavManager = com.flexynotes.util.WebDavManager()
-                                val result = webDavManager.uploadBackup(
-                                    serverUrl = url,
-                                    username = username,
-                                    appPassword = password,
-                                    fileName = "flexynotes_test.txt",
-                                    encryptedPayload = "Hello from FlexyNotes! Connection is working."
-                                )
-
-                                kotlinx.coroutines.Dispatchers.Main.invoke {
-                                    isTesting = false
-                                    if (result.isSuccess) {
-                                        Toast.makeText(context, "Connection successful!", Toast.LENGTH_LONG).show()
-                                    } else {
-                                        val errorMsg = result.exceptionOrNull()?.message ?: "Unknown error"
-                                        Toast.makeText(context, "Failed: $errorMsg", Toast.LENGTH_LONG).show()
-                                    }
-                                }
-                            }
-                        } else {
-                            Toast.makeText(context, "Please fill in all fields first", Toast.LENGTH_SHORT).show()
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !isTesting
-                ) {
-                    if (isTesting) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Text("Test Connection")
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Button(onClick = {
-                // NEU: Alle 4 Werte an onSave übergeben
-                onSave(url, username, password, syncPassword)
-                onDismiss()
-            }) {
-                Text(stringResource(R.string.save, "Save"))
-            }
-        },
-        dismissButton = {
-            OutlinedButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
-            }
-        }
-    )
 }

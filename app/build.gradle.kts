@@ -47,6 +47,11 @@ android {
     buildFeatures {
         compose = true
     }
+    packaging {
+        resources {
+            excludes += "META-INF/DEPENDENCIES"
+        }
+    }
 }
 
 dependencies {
@@ -103,8 +108,16 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.security.crypto)
 
+
     implementation(libs.androidx.hilt.work)
     ksp(libs.androidx.hilt.compiler)
+
+    // Google Authentication
+    implementation("com.google.android.gms:play-services-auth:21.5.1")
+
+    // Google API Client & Drive API
+    implementation("com.google.api-client:google-api-client-android:2.9.0")
+    implementation("com.google.apis:google-api-services-drive:v3-rev20230822-2.0.0")
 
 
 }

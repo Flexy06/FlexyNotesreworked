@@ -4,6 +4,8 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -12,13 +14,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.flexynotes.data.UserPreferences
+import com.flexynotes.util.DriveAuthManager
 import com.flexynotes.util.FileHelper
 import com.flexynotes.viewmodel.BackupUiEvent
 import com.flexynotes.viewmodel.BackupViewModel
 
 @Composable
 fun BackupDialog(
-    preferences: UserPreferences, // Added preferences to get WebDAV credentials
+    preferences: UserPreferences,
     onDismiss: () -> Unit,
     viewModel: BackupViewModel = hiltViewModel()
 ) {
@@ -27,9 +30,15 @@ fun BackupDialog(
     var pendingPayload by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
 
-    val hasCloudConfig = preferences.webDavUrl.isNotBlank() &&
+    // Check WebDAV configuration
+    val hasWebDavConfig = preferences.webDavUrl.isNotBlank() &&
             preferences.webDavUsername.isNotBlank() &&
             preferences.webDavPassword.isNotBlank()
+
+    // Check Google Drive configuration
+    val driveAuthManager = remember { DriveAuthManager(context) }
+    val googleAccount = remember { driveAuthManager.getSignedInAccount() }
+    val hasGoogleDriveConfig = googleAccount != null
 
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
@@ -78,59 +87,87 @@ fun BackupDialog(
 
     AlertDialog(
         onDismissRequest = { if (!isLoading) onDismiss() },
-        title = { Text("Encrypted Backup") },
+        title = { Text("Manual Backup & Restore") },
         text = {
-            Column {
-                Text("Enter your master password. You will need this to restore your notes later!")
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Text("Enter your master password. You will need this to restore your notes later!", style = MaterialTheme.typography.bodyMedium)
                 Spacer(modifier = Modifier.height(8.dp))
+
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("Password") },
+                    label = { Text("Encryption Password") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = password.isNotEmpty() && password.length < 4,
+                    supportingText = { if (password.isNotEmpty() && password.length < 4) Text("Password must be at least 4 characters") }
                 )
 
                 if (isLoading) {
                     Spacer(modifier = Modifier.height(16.dp))
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                } else {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider()
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // --- Local Actions ---
+                    Text("Local Device", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        OutlinedButton(
+                            onClick = { viewModel.prepareExport(password) },
+                            enabled = password.length >= 4
+                        ) { Text("Save") }
+
+                        TextButton(
+                            onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) },
+                            enabled = password.length >= 4
+                        ) { Text("Load") }
+                    }
+
+                    // --- WebDAV Actions ---
+                    if (hasWebDavConfig) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("WebDAV Server", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Button(
+                                onClick = { viewModel.uploadToWebDav(password, preferences.webDavUrl, preferences.webDavUsername, preferences.webDavPassword) },
+                                enabled = password.length >= 4
+                            ) { Text("Backup") }
+
+                            TextButton(
+                                onClick = { viewModel.downloadFromWebDav(password, preferences.webDavUrl, preferences.webDavUsername, preferences.webDavPassword) },
+                                enabled = password.length >= 4
+                            ) { Text("Restore") }
+                        }
+                    }
+
+                    // --- Google Drive Actions ---
+                    if (hasGoogleDriveConfig) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Google Drive", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Button(
+                                onClick = { viewModel.uploadToGoogleDrive(context, password) },
+                                enabled = password.length >= 4
+                            ) { Text("Backup") }
+
+                            TextButton(
+                                onClick = { viewModel.downloadFromGoogleDrive(context, password) },
+                                enabled = password.length >= 4
+                            ) { Text("Restore") }
+                        }
+                    }
                 }
             }
         },
         confirmButton = {
-            Column(horizontalAlignment = Alignment.End) {
-                // Cloud Action Buttons
-                if (hasCloudConfig) {
-                    Button(
-                        onClick = {
-                            viewModel.uploadToCloud(password, preferences.webDavUrl, preferences.webDavUsername, preferences.webDavPassword)
-                        },
-                        enabled = password.length >= 4 && !isLoading
-                    ) { Text("Backup to Cloud") }
-
-                    TextButton(
-                        onClick = {
-                            viewModel.downloadFromCloud(password, preferences.webDavUrl, preferences.webDavUsername, preferences.webDavPassword)
-                        },
-                        enabled = password.length >= 4 && !isLoading
-                    ) { Text("Restore from Cloud") }
-                } else {
-                    Text("Configure WebDAV in settings for Cloud Sync", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-                }
-            }
-        },
-        dismissButton = {
-            Column(horizontalAlignment = Alignment.Start) {
-                // Local Action Buttons
-                OutlinedButton(
-                    onClick = { viewModel.prepareExport(password) },
-                    enabled = password.length >= 4 && !isLoading
-                ) { Text("Save Locally") }
-
-                TextButton(
-                    onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) },
-                    enabled = password.length >= 4 && !isLoading
-                ) { Text("Load Locally") }
+            TextButton(onClick = { if (!isLoading) onDismiss() }) {
+                Text("Close")
             }
         }
     )

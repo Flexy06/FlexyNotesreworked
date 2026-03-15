@@ -1,9 +1,12 @@
 package com.flexynotes.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flexynotes.domain.usecase.ExportBackupUseCase
 import com.flexynotes.domain.usecase.ImportBackupUseCase
+import com.flexynotes.util.DriveAuthManager
+import com.flexynotes.util.GoogleDriveManager
 import com.flexynotes.util.WebDavManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -29,7 +32,8 @@ class BackupViewModel @Inject constructor(
     val uiEvent = _uiEvent.receiveAsFlow()
 
     private val webDavManager = WebDavManager()
-    private val backupFileName = "flexynotes_cloud_backup.json"
+    private val webDavFileName = "flexynotes_cloud_backup.json"
+    private val driveFileName = "flexynotes_drive_backup.json"
 
     // Generates the encrypted string and sends it to the UI for local saving
     fun prepareExport(password: String) {
@@ -57,18 +61,19 @@ class BackupViewModel @Inject constructor(
         }
     }
 
-    // Generates the encrypted string and uploads it directly to WebDAV
-    fun uploadToCloud(password: String, url: String, user: String, pass: String) {
+    // --- WebDAV Actions ---
+
+    fun uploadToWebDav(password: String, url: String, user: String, pass: String) {
         viewModelScope.launch(Dispatchers.IO) {
             _uiEvent.send(BackupUiEvent.CloudActionStarted)
 
             val exportResult = exportBackupUseCase(password)
             exportResult.onSuccess { payload ->
-                val uploadResult = webDavManager.uploadBackup(url, user, pass, backupFileName, payload)
+                val uploadResult = webDavManager.uploadBackup(url, user, pass, webDavFileName, payload)
                 if (uploadResult.isSuccess) {
-                    _uiEvent.send(BackupUiEvent.ShowToast("Cloud backup successful!"))
+                    _uiEvent.send(BackupUiEvent.ShowToast("WebDAV backup successful!"))
                 } else {
-                    _uiEvent.send(BackupUiEvent.ShowToast("Cloud upload failed: ${uploadResult.exceptionOrNull()?.message}"))
+                    _uiEvent.send(BackupUiEvent.ShowToast("WebDAV upload failed: ${uploadResult.exceptionOrNull()?.message}"))
                 }
             }
             exportResult.onFailure {
@@ -79,22 +84,83 @@ class BackupViewModel @Inject constructor(
         }
     }
 
-    // Downloads the encrypted string from WebDAV and decrypts it
-    fun downloadFromCloud(password: String, url: String, user: String, pass: String) {
+    fun downloadFromWebDav(password: String, url: String, user: String, pass: String) {
         viewModelScope.launch(Dispatchers.IO) {
             _uiEvent.send(BackupUiEvent.CloudActionStarted)
 
-            val downloadResult = webDavManager.downloadBackup(url, user, pass, backupFileName)
+            val downloadResult = webDavManager.downloadBackup(url, user, pass, webDavFileName)
             downloadResult.onSuccess { payload ->
                 val importResult = importBackupUseCase(payload, password)
                 if (importResult.isSuccess) {
-                    _uiEvent.send(BackupUiEvent.ShowToast("Restored ${importResult.getOrNull()} notes from Cloud!"))
+                    _uiEvent.send(BackupUiEvent.ShowToast("Restored ${importResult.getOrNull()} notes from WebDAV!"))
                 } else {
                     _uiEvent.send(BackupUiEvent.ShowToast("Import failed. Wrong password?"))
                 }
             }
             downloadResult.onFailure {
-                _uiEvent.send(BackupUiEvent.ShowToast("Cloud download failed: ${it.message}"))
+                _uiEvent.send(BackupUiEvent.ShowToast("WebDAV download failed: ${it.message}"))
+            }
+
+            _uiEvent.send(BackupUiEvent.CloudActionFinished)
+        }
+    }
+
+    // --- Google Drive Actions ---
+
+    fun uploadToGoogleDrive(context: Context, password: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _uiEvent.send(BackupUiEvent.CloudActionStarted)
+
+            val account = DriveAuthManager(context).getSignedInAccount()
+            if (account == null) {
+                _uiEvent.send(BackupUiEvent.ShowToast("Google Drive not signed in"))
+                _uiEvent.send(BackupUiEvent.CloudActionFinished)
+                return@launch
+            }
+
+            val exportResult = exportBackupUseCase(password)
+            exportResult.onSuccess { payload ->
+                val driveManager = GoogleDriveManager(context, account)
+                val uploadResult = driveManager.uploadBackup(driveFileName, payload)
+
+                if (uploadResult.isSuccess) {
+                    _uiEvent.send(BackupUiEvent.ShowToast("Google Drive backup successful!"))
+                } else {
+                    _uiEvent.send(BackupUiEvent.ShowToast("Google Drive upload failed: ${uploadResult.exceptionOrNull()?.message}"))
+                }
+            }
+            exportResult.onFailure {
+                _uiEvent.send(BackupUiEvent.ShowToast(it.message ?: "Encryption failed"))
+            }
+
+            _uiEvent.send(BackupUiEvent.CloudActionFinished)
+        }
+    }
+
+    fun downloadFromGoogleDrive(context: Context, password: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _uiEvent.send(BackupUiEvent.CloudActionStarted)
+
+            val account = DriveAuthManager(context).getSignedInAccount()
+            if (account == null) {
+                _uiEvent.send(BackupUiEvent.ShowToast("Google Drive not signed in"))
+                _uiEvent.send(BackupUiEvent.CloudActionFinished)
+                return@launch
+            }
+
+            val driveManager = GoogleDriveManager(context, account)
+            val downloadResult = driveManager.downloadBackup(driveFileName)
+
+            downloadResult.onSuccess { payload ->
+                val importResult = importBackupUseCase(payload, password)
+                if (importResult.isSuccess) {
+                    _uiEvent.send(BackupUiEvent.ShowToast("Restored ${importResult.getOrNull()} notes from Google Drive!"))
+                } else {
+                    _uiEvent.send(BackupUiEvent.ShowToast("Import failed. Wrong password?"))
+                }
+            }
+            downloadResult.onFailure {
+                _uiEvent.send(BackupUiEvent.ShowToast("Google Drive download failed: ${it.message}"))
             }
 
             _uiEvent.send(BackupUiEvent.CloudActionFinished)

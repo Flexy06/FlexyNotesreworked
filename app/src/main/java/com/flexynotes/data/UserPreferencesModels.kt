@@ -19,4 +19,6 @@ data class UserPreferences(
     val webDavUsername: String = "",
     val webDavPassword: String = "",
     val isAutoSyncEnabled: Boolean = false,
+    val isWebDavSyncEnabled: Boolean = false,
+    val isGoogleDriveSyncEnabled: Boolean = false,
 )
