@@ -116,7 +116,7 @@ fun NoteEditorScreen(
     onNavigateBack: () -> Unit
 ) {
     val titleState = rememberTextFieldState()
-    val contentState = rememberTextFieldState()
+    val contentState = remember { androidx.compose.foundation.text.input.TextFieldState() }
 
     val checklistItems = remember { mutableStateListOf<ChecklistItemState>() }
     val checklistFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }

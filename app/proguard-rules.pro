@@ -19,3 +19,6 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Ignore warnings for Google Tink and ErrorProne compile-time annotations
+-dontwarn com.google.errorprone.annotations.**
