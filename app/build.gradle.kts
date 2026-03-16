@@ -17,9 +17,8 @@ android {
         minSdk = 29
         targetSdk = 35
 
-        // INCREMENTED: version code must be higher for every new upload to Play Console
-        versionCode = 8
-        versionName = "1.2.1"
+        versionCode = 9
+        versionName = "1.2.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
