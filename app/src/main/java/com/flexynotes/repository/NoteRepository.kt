@@ -39,7 +39,10 @@ class NoteRepository @Inject constructor(
         noteDao.updateNote(note.copy(isDeleted = false, modifiedAt = System.currentTimeMillis()))
     }
 
-    suspend fun insertTombstone(tombstone: TombstoneEntity) = noteDao.insertTombstone(tombstone)
+    suspend fun insertTombstone(tombstone: TombstoneEntity) {
+        noteDao.insertTombstone(tombstone)
+    }
+
 
     suspend fun deletePermanently(note: NoteEntity) {
         // Create a tombstone before removing the note completely to track the deletion for cloud sync
@@ -65,4 +68,13 @@ class NoteRepository @Inject constructor(
 
         noteDao.clearTrash()
     }
+
+    // Calculates the most recent modification time across all notes and tombstones
+    suspend fun getLatestLocalModificationTime(): Long {
+        val latestNote = noteDao.getLatestNoteTimestamp() ?: 0L
+        val latestTombstone = noteDao.getLatestTombstoneTimestamp() ?: 0L
+        return maxOf(latestNote, latestTombstone)
+    }
+
+
 }

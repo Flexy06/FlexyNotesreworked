@@ -21,4 +21,5 @@ data class UserPreferences(
     val isAutoSyncEnabled: Boolean = false,
     val isWebDavSyncEnabled: Boolean = false,
     val isGoogleDriveSyncEnabled: Boolean = false,
+    val lastSyncTimestamp: Long = 0L,
 )

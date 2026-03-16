@@ -35,6 +35,9 @@ class UserPreferencesRepository @Inject constructor(
 
         val IS_WEBDAV_SYNC_ENABLED = booleanPreferencesKey("is_webdav_sync_enabled")
         val IS_GOOGLE_DRIVE_SYNC_ENABLED = booleanPreferencesKey("is_google_drive_sync_enabled")
+
+        // Key for the efficiency check
+        val LAST_SYNC_TIMESTAMP = longPreferencesKey("last_sync_timestamp")
     }
 
     val userPreferencesFlow: Flow<UserPreferences> = context.dataStore.data
@@ -58,7 +61,10 @@ class UserPreferencesRepository @Inject constructor(
                 isAutoSyncEnabled = preferences[AUTO_SYNC_ENABLED] ?: false,
 
                 isWebDavSyncEnabled = preferences[IS_WEBDAV_SYNC_ENABLED] ?: false,
-                isGoogleDriveSyncEnabled = preferences[IS_GOOGLE_DRIVE_SYNC_ENABLED] ?: false
+                isGoogleDriveSyncEnabled = preferences[IS_GOOGLE_DRIVE_SYNC_ENABLED] ?: false,
+
+                // Read the last sync timestamp
+                lastSyncTimestamp = preferences[LAST_SYNC_TIMESTAMP] ?: 0L
             )
         }
 
@@ -83,7 +89,10 @@ class UserPreferencesRepository @Inject constructor(
                 isAutoSyncEnabled = preferences[AUTO_SYNC_ENABLED] ?: false,
 
                 isWebDavSyncEnabled = preferences[IS_WEBDAV_SYNC_ENABLED] ?: false,
-                isGoogleDriveSyncEnabled = preferences[IS_GOOGLE_DRIVE_SYNC_ENABLED] ?: false
+                isGoogleDriveSyncEnabled = preferences[IS_GOOGLE_DRIVE_SYNC_ENABLED] ?: false,
+
+                // Map the last sync timestamp
+                lastSyncTimestamp = preferences[LAST_SYNC_TIMESTAMP] ?: 0L
             )
             val updated = update(current)
 
@@ -106,6 +115,16 @@ class UserPreferencesRepository @Inject constructor(
 
             preferences[IS_WEBDAV_SYNC_ENABLED] = updated.isWebDavSyncEnabled
             preferences[IS_GOOGLE_DRIVE_SYNC_ENABLED] = updated.isGoogleDriveSyncEnabled
+
+            // Write the last sync timestamp
+            preferences[LAST_SYNC_TIMESTAMP] = updated.lastSyncTimestamp
+        }
+    }
+
+    // Updates the timestamp of the last successful synchronization
+    suspend fun updateLastSyncTimestamp(timestamp: Long) {
+        updatePreferences { currentPreferences ->
+            currentPreferences.copy(lastSyncTimestamp = timestamp)
         }
     }
 }

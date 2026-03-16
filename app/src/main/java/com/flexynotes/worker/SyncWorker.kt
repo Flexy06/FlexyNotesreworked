@@ -7,6 +7,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.flexynotes.data.UserPreferencesRepository
 import com.flexynotes.domain.usecase.ExportBackupUseCase
+import com.flexynotes.domain.usecase.GetLatestChangeUseCase
 import com.flexynotes.domain.usecase.ImportBackupUseCase
 import com.flexynotes.util.DriveAuthManager
 import com.flexynotes.util.GoogleDriveManager
@@ -22,6 +23,7 @@ class SyncWorker @AssistedInject constructor(
     @Assisted workerParams: WorkerParameters,
     private val exportBackupUseCase: ExportBackupUseCase,
     private val importBackupUseCase: ImportBackupUseCase,
+    private val getLatestChangeUseCase: GetLatestChangeUseCase, // NEW
     private val preferencesRepository: UserPreferencesRepository
 ) : CoroutineWorker(appContext, workerParams) {
 
@@ -33,7 +35,6 @@ class SyncWorker @AssistedInject constructor(
         val syncPassword = secureStorage.getSyncPassword()
 
         if (syncPassword.isNullOrBlank()) {
-            Log.w("SyncWorker", "No sync password set, aborting sync")
             return Result.success()
         }
 
@@ -53,13 +54,15 @@ class SyncWorker @AssistedInject constructor(
         return try {
             var webDavSuccess = true
             var driveSuccess = true
+            var importedChangesCount = 0
 
-            // STEP 1: Download and merge (Import) from active clouds
+            // STEP 1: Download and merge (Import)
             if (isWebDavActive) {
                 val webDavManager = WebDavManager()
                 val downloadResult = webDavManager.downloadBackup(url, username, appPassword, "flexynotes_cloud_backup.json")
                 if (downloadResult.isSuccess) {
-                    importBackupUseCase(downloadResult.getOrThrow(), syncPassword)
+                    val importResult = importBackupUseCase(downloadResult.getOrThrow(), syncPassword)
+                    importedChangesCount += importResult.getOrDefault(0)
                 }
             }
 
@@ -67,18 +70,34 @@ class SyncWorker @AssistedInject constructor(
                 val driveManager = GoogleDriveManager(applicationContext, googleAccount!!)
                 val downloadResult = driveManager.downloadBackup("flexynotes_drive_backup.json")
                 if (downloadResult.isSuccess) {
-                    importBackupUseCase(downloadResult.getOrThrow(), syncPassword)
+                    val importResult = importBackupUseCase(downloadResult.getOrThrow(), syncPassword)
+                    importedChangesCount += importResult.getOrDefault(0)
                 }
             }
 
-            // STEP 2: Export the newly merged local database
+            // --- EFFICIENCY CHECK ---
+            // Find out if the user modified any notes locally since the last successful sync
+            val latestLocalChange = getLatestChangeUseCase()
+            val hasLocalChanges = latestLocalChange > preferences.lastSyncTimestamp
+
+            // If nothing changed locally AND we didn't import any new changes from the cloud,
+            // we can safely abort here. No need to encrypt and upload identical data!
+            if (!hasLocalChanges && importedChangesCount == 0) {
+                Log.d("SyncWorker", "No changes detected. Skipping export and upload to save resources.")
+                // Update timestamp just to be safe
+                preferencesRepository.updateLastSyncTimestamp(System.currentTimeMillis())
+                return Result.success()
+            }
+            // ------------------------
+
+            // STEP 2: Export the newly merged database
             val exportResult = exportBackupUseCase(syncPassword)
             if (exportResult.isFailure) {
                 return Result.failure()
             }
             val mergedPayload = exportResult.getOrThrow()
 
-            // STEP 3: Upload the merged state back to the clouds
+            // STEP 3: Upload the merged state
             if (isWebDavActive) {
                 val webDavManager = WebDavManager()
                 val uploadResult = webDavManager.uploadBackup(url, username, appPassword, "flexynotes_cloud_backup.json", mergedPayload)
@@ -96,6 +115,8 @@ class SyncWorker @AssistedInject constructor(
             if ((isWebDavActive && !webDavSuccess) || (isGoogleDriveActive && !driveSuccess)) {
                 Result.retry()
             } else {
+                // SUCCESS: Save the current time so we don't upload this state again next time
+                preferencesRepository.updateLastSyncTimestamp(System.currentTimeMillis())
                 Result.success()
             }
 

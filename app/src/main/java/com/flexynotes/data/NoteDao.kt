@@ -41,6 +41,12 @@ interface NoteDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTombstone(tombstone: TombstoneEntity)
 
+    @Query("SELECT MAX(modifiedAt) FROM notes")
+    suspend fun getLatestNoteTimestamp(): Long?
+
+    @Query("SELECT MAX(deletedAt) FROM tombstones")
+    suspend fun getLatestTombstoneTimestamp(): Long?
+
     @Query("SELECT * FROM notes")
     suspend fun getAllNotesForBackup(): List<NoteEntity>
 }
