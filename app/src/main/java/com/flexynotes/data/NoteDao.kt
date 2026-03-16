@@ -35,6 +35,12 @@ interface NoteDao {
     @Query("DELETE FROM notes WHERE isDeleted = 1")
     suspend fun clearTrash()
 
+    @Query("SELECT * FROM tombstones")
+    fun getAllTombstones(): Flow<List<TombstoneEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTombstone(tombstone: TombstoneEntity)
+
     @Query("SELECT * FROM notes")
     suspend fun getAllNotesForBackup(): List<NoteEntity>
 }

@@ -1,8 +1,10 @@
 package com.flexynotes.util
 
 import com.flexynotes.data.NoteEntity
+import com.flexynotes.data.TombstoneEntity
 import com.flexynotes.data.backup.BackupContainer
 import com.flexynotes.data.backup.BackupNote
+import com.flexynotes.data.backup.BackupTombstone
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -13,9 +15,8 @@ object BackupJsonManager {
         encodeDefaults = true
     }
 
-    // Converts database entities to a formatted JSON string
-    fun createJsonFromNotes(notes: List<NoteEntity>): String {
-        // In BackupJsonManager.kt -> createJsonFromNotes()
+    // Converts database entities and tombstones to a formatted JSON string
+    fun createJsonFromBackup(notes: List<NoteEntity>, tombstones: List<TombstoneEntity>): String {
         val backupNotes = notes.map { entity ->
             BackupNote(
                 id = entity.id,
@@ -32,22 +33,29 @@ object BackupJsonManager {
             )
         }
 
+        val backupTombstones = tombstones.map { entity ->
+            BackupTombstone(
+                noteId = entity.noteId,
+                deletedAt = entity.deletedAt
+            )
+        }
+
         val container = BackupContainer(
-            version = 1,
+            version = 2, // Bumped version to 2 to indicate two-way sync support
             timestamp = System.currentTimeMillis(),
-            notes = backupNotes
+            notes = backupNotes,
+            tombstones = backupTombstones
         )
 
         return jsonConfig.encodeToString(container)
     }
 
-    // Parses a JSON string back into backup models
-    fun parseNotesFromJson(jsonString: String): List<BackupNote> {
+    // Parses a JSON string back into the full BackupContainer
+    fun parseContainerFromJson(jsonString: String): BackupContainer? {
         return try {
-            val container = jsonConfig.decodeFromString<BackupContainer>(jsonString)
-            container.notes
+            jsonConfig.decodeFromString<BackupContainer>(jsonString)
         } catch (e: Exception) {
-            emptyList()
+            null
         }
     }
 }

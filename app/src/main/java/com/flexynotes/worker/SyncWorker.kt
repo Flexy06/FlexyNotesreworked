@@ -7,6 +7,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.flexynotes.data.UserPreferencesRepository
 import com.flexynotes.domain.usecase.ExportBackupUseCase
+import com.flexynotes.domain.usecase.ImportBackupUseCase
 import com.flexynotes.util.DriveAuthManager
 import com.flexynotes.util.GoogleDriveManager
 import com.flexynotes.util.SecureStorageManager
@@ -20,77 +21,78 @@ class SyncWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
     private val exportBackupUseCase: ExportBackupUseCase,
+    private val importBackupUseCase: ImportBackupUseCase,
     private val preferencesRepository: UserPreferencesRepository
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
-        Log.d("SyncWorker", "SyncWorker started successfully")
+        Log.d("SyncWorker", "Two-Way SyncWorker started")
 
         val preferences = preferencesRepository.userPreferencesFlow.first()
         val secureStorage = SecureStorageManager(applicationContext)
         val syncPassword = secureStorage.getSyncPassword()
 
-        // Abort if no encryption password is set
         if (syncPassword.isNullOrBlank()) {
             Log.w("SyncWorker", "No sync password set, aborting sync")
             return Result.success()
         }
 
-        // Check WebDAV configuration AND user toggle
         val url = preferences.webDavUrl
         val username = preferences.webDavUsername
         val appPassword = preferences.webDavPassword
         val isWebDavActive = preferences.isWebDavSyncEnabled && url.isNotBlank() && username.isNotBlank() && appPassword.isNotBlank()
 
-        // Check Google Drive configuration AND user toggle
         val driveAuthManager = DriveAuthManager(applicationContext)
         val googleAccount = driveAuthManager.getSignedInAccount()
         val isGoogleDriveActive = preferences.isGoogleDriveSyncEnabled && googleAccount != null
 
-        // Abort if no cloud sync methods are actively enabled by the user
         if (!isWebDavActive && !isGoogleDriveActive) {
             return Result.success()
         }
 
         return try {
-            val exportResult = exportBackupUseCase(syncPassword)
-
-            if (exportResult.isFailure) {
-                return Result.failure()
-            }
-
-            val payload = exportResult.getOrThrow()
             var webDavSuccess = true
             var driveSuccess = true
 
-            // Handle WebDAV Upload
+            // STEP 1: Download and merge (Import) from active clouds
             if (isWebDavActive) {
                 val webDavManager = WebDavManager()
-                val uploadResult = webDavManager.uploadBackup(
-                    serverUrl = url,
-                    username = username,
-                    appPassword = appPassword,
-                    fileName = "flexynotes_cloud_backup.json",
-                    encryptedPayload = payload
-                )
+                val downloadResult = webDavManager.downloadBackup(url, username, appPassword, "flexynotes_cloud_backup.json")
+                if (downloadResult.isSuccess) {
+                    importBackupUseCase(downloadResult.getOrThrow(), syncPassword)
+                }
+            }
+
+            if (isGoogleDriveActive) {
+                val driveManager = GoogleDriveManager(applicationContext, googleAccount!!)
+                val downloadResult = driveManager.downloadBackup("flexynotes_drive_backup.json")
+                if (downloadResult.isSuccess) {
+                    importBackupUseCase(downloadResult.getOrThrow(), syncPassword)
+                }
+            }
+
+            // STEP 2: Export the newly merged local database
+            val exportResult = exportBackupUseCase(syncPassword)
+            if (exportResult.isFailure) {
+                return Result.failure()
+            }
+            val mergedPayload = exportResult.getOrThrow()
+
+            // STEP 3: Upload the merged state back to the clouds
+            if (isWebDavActive) {
+                val webDavManager = WebDavManager()
+                val uploadResult = webDavManager.uploadBackup(url, username, appPassword, "flexynotes_cloud_backup.json", mergedPayload)
                 webDavSuccess = uploadResult.isSuccess
                 if (!webDavSuccess) Log.e("SyncWorker", "WebDAV upload failed")
             }
 
-            // Handle Google Drive Upload
             if (isGoogleDriveActive) {
                 val driveManager = GoogleDriveManager(applicationContext, googleAccount!!)
-                val driveResult = driveManager.uploadBackup(
-                    fileName = "flexynotes_drive_backup.json",
-                    fileContent = payload
-                )
-                driveSuccess = driveResult.isSuccess
-                if (!driveSuccess) {
-                    Log.e("SyncWorker", "Google Drive upload failed: ${driveResult.exceptionOrNull()?.message}")
-                }
+                val uploadResult = driveManager.uploadBackup("flexynotes_drive_backup.json", mergedPayload)
+                driveSuccess = uploadResult.isSuccess
+                if (!driveSuccess) Log.e("SyncWorker", "Google Drive upload failed")
             }
 
-            // Retry if any ACTIVE upload failed (e.g., due to network issues)
             if ((isWebDavActive && !webDavSuccess) || (isGoogleDriveActive && !driveSuccess)) {
                 Result.retry()
             } else {

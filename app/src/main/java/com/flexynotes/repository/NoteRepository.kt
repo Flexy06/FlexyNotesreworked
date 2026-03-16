@@ -2,7 +2,9 @@ package com.flexynotes.repository
 
 import com.flexynotes.data.NoteDao
 import com.flexynotes.data.NoteEntity
+import com.flexynotes.data.TombstoneEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -13,6 +15,9 @@ class NoteRepository @Inject constructor(
     val activeNotes: Flow<List<NoteEntity>> = noteDao.getActiveNotes()
     val archivedNotes: Flow<List<NoteEntity>> = noteDao.getArchivedNotes()
     val deletedNotes: Flow<List<NoteEntity>> = noteDao.getDeletedNotes()
+
+    // Expose tombstones for the backup export
+    val tombstones: Flow<List<TombstoneEntity>> = noteDao.getAllTombstones()
 
     suspend fun getNoteById(id: String): NoteEntity? = noteDao.getNoteById(id)
 
@@ -34,7 +39,30 @@ class NoteRepository @Inject constructor(
         noteDao.updateNote(note.copy(isDeleted = false, modifiedAt = System.currentTimeMillis()))
     }
 
-    suspend fun deletePermanently(note: NoteEntity) = noteDao.deleteNote(note)
+    suspend fun insertTombstone(tombstone: TombstoneEntity) = noteDao.insertTombstone(tombstone)
 
-    suspend fun clearTrash() = noteDao.clearTrash()
+    suspend fun deletePermanently(note: NoteEntity) {
+        // Create a tombstone before removing the note completely to track the deletion for cloud sync
+        val tombstone = TombstoneEntity(
+            noteId = note.id,
+            deletedAt = System.currentTimeMillis()
+        )
+        noteDao.insertTombstone(tombstone)
+        noteDao.deleteNote(note)
+    }
+
+    suspend fun clearTrash() {
+        // Fetch all notes currently in the trash to create tombstones for them before clearing
+        val notesToDelete = deletedNotes.first()
+
+        notesToDelete.forEach { note ->
+            val tombstone = TombstoneEntity(
+                noteId = note.id,
+                deletedAt = System.currentTimeMillis()
+            )
+            noteDao.insertTombstone(tombstone)
+        }
+
+        noteDao.clearTrash()
+    }
 }

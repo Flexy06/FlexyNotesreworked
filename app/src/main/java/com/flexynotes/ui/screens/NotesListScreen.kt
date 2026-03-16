@@ -1,11 +1,11 @@
 package com.flexynotes.ui.screens
 
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -46,13 +46,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -61,22 +63,22 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flexynotes.app.R
 import com.flexynotes.viewmodel.NotesViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.material.icons.filled.Sync
-import androidx.compose.ui.platform.LocalContext
-import android.widget.Toast
 import com.flexynotes.worker.SyncManager
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -85,12 +87,10 @@ fun NotesListScreen(
     isGridView: Boolean,
     useHaptics: Boolean,
     onGridViewToggle: () -> Unit,
-    // Changed Long? to String?
     onNavigateToEditor: (String?, Boolean) -> Unit,
     onOpenDrawer: () -> Unit
 ) {
     val notes by viewModel.activeNotes.collectAsStateWithLifecycle()
-    // Changed Set<Long> to Set<String>
     var selectedNoteIds by remember { mutableStateOf(setOf<String>()) }
     var showFabMenu by remember { mutableStateOf(false) }
 
@@ -102,6 +102,11 @@ fun NotesListScreen(
     val density = LocalDensity.current
     val context = LocalContext.current
     val minDragDistance = with(density) { 100.dp.toPx() }
+
+    // Pull to Refresh state
+    var isRefreshing by remember { mutableStateOf(false) }
+    val pullRefreshState = rememberPullToRefreshState()
+    val coroutineScope = rememberCoroutineScope()
 
     val displayedNotes = remember(notes, searchQuery) {
         if (searchQuery.isBlank()) {
@@ -137,7 +142,6 @@ fun NotesListScreen(
         topBar = {
             if (selectedNoteIds.isNotEmpty()) {
                 TopAppBar(
-
                     title = { Text(stringResource(R.string.selected_count, selectedNoteIds.size)) },
                     navigationIcon = {
                         IconButton(onClick = { selectedNoteIds = emptySet() }) {
@@ -229,7 +233,6 @@ fun NotesListScreen(
                                     }
                                 },
                                 actions = {
-
                                     IconButton(onClick = { isSearching = true }) {
                                         Icon(Icons.Default.Search, contentDescription = "Search notes")
                                     }
@@ -239,20 +242,8 @@ fun NotesListScreen(
                                             contentDescription = "Toggle view"
                                         )
                                     }
-
-                                    IconButton(onClick = {
-                                        if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-
-                                        // Feuert direkt einen Download und Upload ab
-                                        SyncManager.triggerImmediateDownload(context)
-                                        SyncManager.triggerImmediateUpload(context)
-
-                                        Toast.makeText(context, "Syncing...", Toast.LENGTH_SHORT).show()
-                                    }) {
-                                        Icon(Icons.Default.Sync, contentDescription = "Sync Now")
-                                    }
+                                    // Removed the static sync button from here
                                 }
-
                             )
                         }
                     }
@@ -394,178 +385,200 @@ fun NotesListScreen(
                         }
                     }
                     "CONTENT" -> {
-                        LazyVerticalStaggeredGrid(
-                            columns = StaggeredGridCells.Fixed(if (isGridView) 2 else 1),
+                        // NEW: PullToRefreshBox wrapping the LazyGrid
+                        PullToRefreshBox(
+                            isRefreshing = isRefreshing,
+                            onRefresh = {
+                                isRefreshing = true
+                                if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+
+                                // Trigger background sync
+                                SyncManager.triggerImmediateDownload(context)
+                                SyncManager.triggerImmediateUpload(context)
+                                Toast.makeText(context, "Syncing...", Toast.LENGTH_SHORT).show()
+
+                                // Simulate network delay for the UI spinner to look smooth
+                                coroutineScope.launch {
+                                    delay(1500)
+                                    isRefreshing = false
+                                }
+                            },
+                            state = pullRefreshState,
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(paddingValues),
-                            contentPadding = PaddingValues(16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalItemSpacing = 8.dp
+                                .padding(paddingValues)
                         ) {
-                            items(displayedNotes, key = { it.id }) { note ->
-                                val isSelected = selectedNoteIds.contains(note.id)
+                            LazyVerticalStaggeredGrid(
+                                columns = StaggeredGridCells.Fixed(if (isGridView) 2 else 1),
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalItemSpacing = 8.dp
+                            ) {
+                                items(displayedNotes, key = { it.id }) { note ->
+                                    val isSelected = selectedNoteIds.contains(note.id)
 
-                                val stateHolder = remember { arrayOfNulls<SwipeToDismissBoxState>(1) }
+                                    val stateHolder = remember { arrayOfNulls<SwipeToDismissBoxState>(1) }
 
-                                val dismissState = rememberSwipeToDismissBoxState(
-                                    confirmValueChange = { dismissValue ->
-                                        when (dismissValue) {
-                                            SwipeToDismissBoxValue.StartToEnd -> {
-                                                val offset = try { stateHolder[0]?.requireOffset() ?: 0f } catch (e: Exception) { 0f }
-                                                if (Math.abs(offset) < minDragDistance) return@rememberSwipeToDismissBoxState false
+                                    val dismissState = rememberSwipeToDismissBoxState(
+                                        confirmValueChange = { dismissValue ->
+                                            when (dismissValue) {
+                                                SwipeToDismissBoxValue.StartToEnd -> {
+                                                    val offset = try { stateHolder[0]?.requireOffset() ?: 0f } catch (e: Exception) { 0f }
+                                                    if (Math.abs(offset) < minDragDistance) return@rememberSwipeToDismissBoxState false
 
-                                                viewModel.archiveNote(note)
-                                                true
+                                                    viewModel.archiveNote(note)
+                                                    true
+                                                }
+                                                SwipeToDismissBoxValue.EndToStart -> {
+                                                    val offset = try { stateHolder[0]?.requireOffset() ?: 0f } catch (e: Exception) { 0f }
+                                                    if (Math.abs(offset) < minDragDistance) return@rememberSwipeToDismissBoxState false
+
+                                                    viewModel.moveToTrash(note)
+                                                    true
+                                                }
+                                                else -> false
                                             }
-                                            SwipeToDismissBoxValue.EndToStart -> {
-                                                val offset = try { stateHolder[0]?.requireOffset() ?: 0f } catch (e: Exception) { 0f }
-                                                if (Math.abs(offset) < minDragDistance) return@rememberSwipeToDismissBoxState false
+                                        },
+                                        positionalThreshold = { totalDistance -> totalDistance * 0.4f }
+                                    )
+                                    stateHolder[0] = dismissState
 
-                                                viewModel.moveToTrash(note)
-                                                true
+                                    var previousTarget by remember { mutableStateOf(SwipeToDismissBoxValue.Settled) }
+                                    LaunchedEffect(dismissState) {
+                                        snapshotFlow { dismissState.targetValue }.collect { currentTarget ->
+                                            if (useHaptics) {
+                                                if (previousTarget == SwipeToDismissBoxValue.Settled && currentTarget != SwipeToDismissBoxValue.Settled) {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                } else if (previousTarget != SwipeToDismissBoxValue.Settled && currentTarget == SwipeToDismissBoxValue.Settled) {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                }
                                             }
-                                            else -> false
+                                            previousTarget = currentTarget
                                         }
-                                    },
-                                    positionalThreshold = { totalDistance -> totalDistance * 0.4f }
-                                )
-                                stateHolder[0] = dismissState
-
-                                var previousTarget by remember { mutableStateOf(SwipeToDismissBoxValue.Settled) }
-                                LaunchedEffect(dismissState) {
-                                    snapshotFlow { dismissState.targetValue }.collect { currentTarget ->
-                                        if (useHaptics) {
-                                            if (previousTarget == SwipeToDismissBoxValue.Settled && currentTarget != SwipeToDismissBoxValue.Settled) {
-                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            } else if (previousTarget != SwipeToDismissBoxValue.Settled && currentTarget == SwipeToDismissBoxValue.Settled) {
-                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                            }
-                                        }
-                                        previousTarget = currentTarget
                                     }
-                                }
 
-                                val rawOffset = try { dismissState.requireOffset() } catch(_: Exception) { 0f }
-                                val isPastThreshold = dismissState.targetValue != SwipeToDismissBoxValue.Settled
-                                val targetResistance = if (!isPastThreshold && rawOffset != 0f) -rawOffset * 0.4f else 0f
+                                    val rawOffset = try { dismissState.requireOffset() } catch(_: Exception) { 0f }
+                                    val isPastThreshold = dismissState.targetValue != SwipeToDismissBoxValue.Settled
+                                    val targetResistance = if (!isPastThreshold && rawOffset != 0f) -rawOffset * 0.4f else 0f
 
-                                val animatedResistance by animateFloatAsState(
-                                    targetValue = targetResistance,
-                                    animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                                        stiffness = Spring.StiffnessLow
-                                    ),
-                                    label = "resistance"
-                                )
+                                    val animatedResistance by animateFloatAsState(
+                                        targetValue = targetResistance,
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                                            stiffness = Spring.StiffnessLow
+                                        ),
+                                        label = "resistance"
+                                    )
 
-                                val isSwiping = dismissState.dismissDirection != SwipeToDismissBoxValue.Settled ||
-                                        dismissState.targetValue != SwipeToDismissBoxValue.Settled
+                                    val isSwiping = dismissState.dismissDirection != SwipeToDismissBoxValue.Settled ||
+                                            dismissState.targetValue != SwipeToDismissBoxValue.Settled
 
-                                SwipeToDismissBox(
-                                    state = dismissState,
-                                    modifier = Modifier
-                                        .animateItem()
-                                        .zIndex(if (isSwiping) 1f else 0f),
-                                    backgroundContent = {
-                                        val targetColor = when (dismissState.targetValue) {
-                                            SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.secondaryContainer
-                                            SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
-                                            else -> Color.Transparent
-                                        }
+                                    SwipeToDismissBox(
+                                        state = dismissState,
+                                        modifier = Modifier
+                                            .animateItem()
+                                            .zIndex(if (isSwiping) 1f else 0f),
+                                        backgroundContent = {
+                                            val targetColor = when (dismissState.targetValue) {
+                                                SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.secondaryContainer
+                                                SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
+                                                else -> Color.Transparent
+                                            }
 
-                                        val color by animateColorAsState(
-                                            targetValue = targetColor,
-                                            label = "swipeColor"
-                                        )
-
-                                        val alignment = when (dismissState.dismissDirection) {
-                                            SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
-                                            SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
-                                            else -> Alignment.CenterStart
-                                        }
-
-                                        val paddingStart = if (alignment == Alignment.CenterStart) 20.dp else 0.dp
-                                        val paddingEnd = if (alignment == Alignment.CenterEnd) 20.dp else 0.dp
-
-                                        val icon = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) Icons.Default.Delete else Icons.Default.Archive
-                                        val iconTint = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer
-
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .background(color, MaterialTheme.shapes.medium)
-                                                .padding(start = paddingStart, end = paddingEnd),
-                                            contentAlignment = alignment
-                                        ) {
-                                            Icon(
-                                                imageVector = icon,
-                                                contentDescription = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) "Delete" else "Archive",
-                                                tint = iconTint
+                                            val color by animateColorAsState(
+                                                targetValue = targetColor,
+                                                label = "swipeColor"
                                             )
-                                        }
-                                    },
-                                    content = {
-                                        Card(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .graphicsLayer { translationX = animatedResistance }
-                                                .combinedClickable(
-                                                    onClick = {
-                                                        if (selectedNoteIds.isNotEmpty()) {
-                                                            selectedNoteIds = if (isSelected) selectedNoteIds - note.id else selectedNoteIds + note.id
-                                                        } else {
-                                                            if (isSearching) {
-                                                                isSearching = false
-                                                                searchQuery = ""
-                                                            }
-                                                            onNavigateToEditor(note.id, false)
-                                                        }
-                                                    },
-                                                    onLongClick = {
-                                                        if (!isSelected) {
-                                                            if (useHaptics) {
-                                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                            }
-                                                            selectedNoteIds = selectedNoteIds + note.id
-                                                        }
-                                                    }
-                                                ),
-                                            border = if (isSelected) {
-                                                BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-                                            } else {
-                                                BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                                            },
-                                            colors = CardDefaults.cardColors(
-                                                containerColor = if (isSelected) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface
-                                            )
-                                        ) {
-                                            Column(modifier = Modifier.padding(16.dp)) {
-                                                Text(
-                                                    text = note.title.ifEmpty { stringResource(R.string.untitled) },
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    maxLines = 2,
-                                                    overflow = TextOverflow.Ellipsis
+
+                                            val alignment = when (dismissState.dismissDirection) {
+                                                SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+                                                SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
+                                                else -> Alignment.CenterStart
+                                            }
+
+                                            val paddingStart = if (alignment == Alignment.CenterStart) 20.dp else 0.dp
+                                            val paddingEnd = if (alignment == Alignment.CenterEnd) 20.dp else 0.dp
+
+                                            val icon = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) Icons.Default.Delete else Icons.Default.Archive
+                                            val iconTint = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer
+
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .background(color, MaterialTheme.shapes.medium)
+                                                    .padding(start = paddingStart, end = paddingEnd),
+                                                contentAlignment = alignment
+                                            ) {
+                                                Icon(
+                                                    imageVector = icon,
+                                                    contentDescription = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) "Delete" else "Archive",
+                                                    tint = iconTint
                                                 )
-                                                if (note.content.isNotBlank()) {
-                                                    Spacer(modifier = Modifier.height(4.dp))
-
-                                                    val displayContent = if (note.isChecklist) {
-                                                        note.content.replace("[ ] ", "☐ ").replace("[x] ", "☑ ")
-                                                    } else {
-                                                        note.content
-                                                    }
-
+                                            }
+                                        },
+                                        content = {
+                                            Card(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .graphicsLayer { translationX = animatedResistance }
+                                                    .combinedClickable(
+                                                        onClick = {
+                                                            if (selectedNoteIds.isNotEmpty()) {
+                                                                selectedNoteIds = if (isSelected) selectedNoteIds - note.id else selectedNoteIds + note.id
+                                                            } else {
+                                                                if (isSearching) {
+                                                                    isSearching = false
+                                                                    searchQuery = ""
+                                                                }
+                                                                onNavigateToEditor(note.id, false)
+                                                            }
+                                                        },
+                                                        onLongClick = {
+                                                            if (!isSelected) {
+                                                                if (useHaptics) {
+                                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                                }
+                                                                selectedNoteIds = selectedNoteIds + note.id
+                                                            }
+                                                        }
+                                                    ),
+                                                border = if (isSelected) {
+                                                    BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+                                                } else {
+                                                    BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                                                },
+                                                colors = CardDefaults.cardColors(
+                                                    containerColor = if (isSelected) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface
+                                                )
+                                            ) {
+                                                Column(modifier = Modifier.padding(16.dp)) {
                                                     Text(
-                                                        text = displayContent,
-                                                        style = MaterialTheme.typography.bodyMedium,
-                                                        maxLines = 5
+                                                        text = note.title.ifEmpty { stringResource(R.string.untitled) },
+                                                        style = MaterialTheme.typography.titleMedium,
+                                                        maxLines = 2,
+                                                        overflow = TextOverflow.Ellipsis
                                                     )
+                                                    if (note.content.isNotBlank()) {
+                                                        Spacer(modifier = Modifier.height(4.dp))
+
+                                                        val displayContent = if (note.isChecklist) {
+                                                            note.content.replace("[ ] ", "☐ ").replace("[x] ", "☑ ")
+                                                        } else {
+                                                            note.content
+                                                        }
+
+                                                        Text(
+                                                            text = displayContent,
+                                                            style = MaterialTheme.typography.bodyMedium,
+                                                            maxLines = 5
+                                                        )
+                                                    }
                                                 }
                                             }
                                         }
-                                    }
-                                )
+                                    )
+                                }
                             }
                         }
                     }

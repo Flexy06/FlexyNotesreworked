@@ -8,13 +8,14 @@
 
     <application
         android:name="com.flexynotes.app.FlexyNotesApplication"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:enableOnBackInvokedCallback="true"
-        android:theme="@style/Theme.App.Starting">
+        android:theme="@style/Theme.App.Starting"
+        android:fullBackupContent="false">
 
         <activity
             android:name="com.flexynotes.app.MainActivity"

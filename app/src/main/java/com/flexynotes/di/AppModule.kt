@@ -52,6 +52,15 @@ object AppModule {
         }
     }
 
+    // NEW: Migration from version 6 to 7 to create the tombstones table
+    private val MIGRATION_6_7 = object : Migration(6, 7) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                "CREATE TABLE IF NOT EXISTS `tombstones` (`noteId` TEXT NOT NULL, `deletedAt` INTEGER NOT NULL, PRIMARY KEY(`noteId`))"
+            )
+        }
+    }
+
     @Provides
     @Singleton
     fun provideNoteDatabase(@ApplicationContext context: Context): NoteDatabase {
@@ -60,7 +69,7 @@ object AppModule {
             NoteDatabase::class.java,
             "flexy_notes_db"
         )
-            .addMigrations(MIGRATION_5_6)
+            .addMigrations(MIGRATION_5_6, MIGRATION_6_7) // Added the new migration here
             .build()
     }
 

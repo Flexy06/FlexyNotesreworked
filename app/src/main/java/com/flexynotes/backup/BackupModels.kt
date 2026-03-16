@@ -3,12 +3,13 @@ package com.flexynotes.data.backup
 import kotlinx.serialization.Serializable
 import java.util.UUID
 
-// Wrapper to hold all notes and metadata for version control
+// Wrapper to hold all notes, tombstones and metadata for version control
 @Serializable
 data class BackupContainer(
     val version: Int,
     val timestamp: Long,
-    val notes: List<BackupNote>
+    val notes: List<BackupNote>,
+    val tombstones: List<BackupTombstone> = emptyList() // Default for backwards compatibility
 )
 
 @Serializable
@@ -24,4 +25,10 @@ data class BackupNote(
     val isArchived: Boolean = false,
     val isChecklist: Boolean,
     val reminderTime: Long?
+)
+
+@Serializable
+data class BackupTombstone(
+    val noteId: String,
+    val deletedAt: Long
 )
