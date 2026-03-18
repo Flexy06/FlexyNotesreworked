@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flexynotes.data.NoteEntity
+import com.flexynotes.data.SortOrder
+import com.flexynotes.data.UserPreferencesRepository
 import com.flexynotes.domain.usecase.*
 import com.flexynotes.util.ReminderManager
 import com.flexynotes.worker.SyncManager
@@ -12,6 +14,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -36,18 +39,27 @@ class NotesViewModel @Inject constructor(
     private val restoreNoteUseCase: RestoreNoteUseCase,
     private val deletePermanentlyUseCase: DeletePermanentlyUseCase,
     private val clearTrashUseCase: ClearTrashUseCase,
-    private val reminderManager: ReminderManager
+    private val reminderManager: ReminderManager,
+    private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
     private val _uiEvent = Channel<UiEvent>()
     val uiEvent = _uiEvent.receiveAsFlow()
 
-    val activeNotes: StateFlow<List<NoteEntity>> = getActiveNotesUseCase()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
+    val activeNotes: StateFlow<List<NoteEntity>> = combine(
+        getActiveNotesUseCase(),
+        userPreferencesRepository.userPreferencesFlow
+    ) { notes, prefs ->
+        when (prefs.sortOrder) {
+            SortOrder.DATE_EDITED  -> notes.sortedByDescending { it.modifiedAt }
+            SortOrder.DATE_CREATED -> notes.sortedByDescending { it.createdAt }
+            SortOrder.ALPHABETICAL -> notes.sortedBy { it.title.lowercase() }
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
     val archivedNotes: StateFlow<List<NoteEntity>> = getArchivedNotesUseCase()
         .stateIn(
@@ -63,7 +75,6 @@ class NotesViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    // Changed ID type to String
     suspend fun getNoteById(id: String): NoteEntity? {
         return getNoteByIdUseCase(id)
     }
@@ -83,9 +94,7 @@ class NotesViewModel @Inject constructor(
 
             try {
                 addNoteUseCase(newNote)
-
                 if (validReminderTime != null) {
-                    // We extract the ID directly from the newly created NoteEntity
                     reminderManager.scheduleReminder(newNote.id, title, content, validReminderTime)
                 }
                 SyncManager.triggerImmediateUpload(context)

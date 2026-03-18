@@ -36,8 +36,10 @@ class UserPreferencesRepository @Inject constructor(
         val IS_WEBDAV_SYNC_ENABLED = booleanPreferencesKey("is_webdav_sync_enabled")
         val IS_GOOGLE_DRIVE_SYNC_ENABLED = booleanPreferencesKey("is_google_drive_sync_enabled")
 
-        // Key for the efficiency check
+
         val LAST_SYNC_TIMESTAMP = longPreferencesKey("last_sync_timestamp")
+
+
     }
 
     val userPreferencesFlow: Flow<UserPreferences> = context.dataStore.data
@@ -128,3 +130,4 @@ class UserPreferencesRepository @Inject constructor(
         }
     }
 }
+
