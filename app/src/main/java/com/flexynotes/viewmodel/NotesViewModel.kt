@@ -79,7 +79,7 @@ class NotesViewModel @Inject constructor(
         return getNoteByIdUseCase(id)
     }
 
-    fun addNote(title: String, content: String, isChecklist: Boolean = false, reminderTime: Long? = null) {
+    fun addNote(title: String, content: String, isChecklist: Boolean = false, reminderTime: Long? = null, colorIndex: Int? = null) {
         viewModelScope.launch {
             val validReminderTime = if (reminderTime != null && reminderTime > System.currentTimeMillis()) reminderTime else null
 
@@ -88,6 +88,7 @@ class NotesViewModel @Inject constructor(
                 content = content,
                 isChecklist = isChecklist,
                 reminderTime = validReminderTime,
+                colorIndex = colorIndex,
                 createdAt = System.currentTimeMillis(),
                 modifiedAt = System.currentTimeMillis()
             )
@@ -104,7 +105,7 @@ class NotesViewModel @Inject constructor(
         }
     }
 
-    fun updateNote(note: NoteEntity, newTitle: String, newContent: String, newReminderTime: Long? = null) {
+    fun updateNote(note: NoteEntity, newTitle: String, newContent: String, newReminderTime: Long? = null, newColorIndex: Int? = null) {
         viewModelScope.launch {
             val isTimeValid = newReminderTime != null && newReminderTime > System.currentTimeMillis()
             val finalReminderTime = if (isTimeValid) newReminderTime else null
@@ -113,6 +114,7 @@ class NotesViewModel @Inject constructor(
                 title = newTitle,
                 content = newContent,
                 reminderTime = finalReminderTime,
+                colorIndex = newColorIndex,
                 modifiedAt = System.currentTimeMillis()
             )
 

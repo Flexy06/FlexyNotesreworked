@@ -9,9 +9,13 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -28,7 +32,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.input.rememberTextFieldState
@@ -43,6 +50,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
@@ -71,8 +79,10 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
@@ -81,6 +91,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.luminance
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -124,10 +135,12 @@ fun NoteEditorScreen(
 
     var existingNote by remember { mutableStateOf<NoteEntity?>(null) }
     var reminderTime by remember { mutableStateOf<Long?>(null) }
+    var selectedColorIndex by remember { mutableStateOf<Int?>(null) }
 
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
+    var showColorPicker by remember { mutableStateOf(false) }
 
     val datePickerState = rememberDatePickerState()
     val timePickerState = rememberTimePickerState(
@@ -171,22 +184,24 @@ fun NoteEditorScreen(
         }
 
         if (existingNote != null) {
-            if (titleText != existingNote!!.title || contentText != existingNote!!.content || reminderTime != existingNote!!.reminderTime) {
-                viewModel.updateNote(existingNote!!, titleText, contentText, reminderTime)
+            if (titleText != existingNote!!.title || contentText != existingNote!!.content || reminderTime != existingNote!!.reminderTime || selectedColorIndex != existingNote!!.colorIndex) {
+                viewModel.updateNote(existingNote!!, titleText, contentText, reminderTime, selectedColorIndex)
                 existingNote = existingNote!!.copy(
                     title = titleText,
                     content = contentText,
-                    reminderTime = reminderTime
+                    reminderTime = reminderTime,
+                    colorIndex = selectedColorIndex
                 )
             }
         } else {
-            viewModel.addNote(titleText, contentText, currentIsChecklist, reminderTime)
+            viewModel.addNote(titleText, contentText, currentIsChecklist, reminderTime, selectedColorIndex)
             existingNote = NoteEntity(
                 id = UUID.randomUUID().toString(),
                 title = titleText,
                 content = contentText,
                 isChecklist = currentIsChecklist,
                 reminderTime = reminderTime,
+                colorIndex = selectedColorIndex,
                 createdAt = System.currentTimeMillis(),
                 modifiedAt = System.currentTimeMillis()
             )
@@ -244,6 +259,7 @@ fun NoteEditorScreen(
             if (note != null) {
                 existingNote = note
                 reminderTime = note.reminderTime
+                selectedColorIndex = note.colorIndex
                 titleState.setTextAndPlaceCursorAtEnd(note.title)
 
                 if (note.isChecklist) {
@@ -317,131 +333,214 @@ fun NoteEditorScreen(
         )
     }
 
+    val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val paletteColorsLight = listOf(
+        null,
+        Color(0xFFE8F5E9), Color(0xFFFFF8E1), Color(0xFFE3F2FD),
+        Color(0xFFFCE4EC), Color(0xFFEDE7F6), Color(0xFFE0F7FA),
+        Color(0xFFFFF3E0), Color(0xFFF3E5F5),
+    )
+    val paletteColorsDark = listOf(
+        null,
+        Color(0xFF1B2E1E), Color(0xFF2E2A14), Color(0xFF152130),
+        Color(0xFF2E1820), Color(0xFF1E1A2E), Color(0xFF122428),
+        Color(0xFF2E2418), Color(0xFF271A2E),
+    )
+    val paletteColors = if (isDarkTheme) paletteColorsDark else paletteColorsLight
+
     Scaffold(
         topBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    onClick = currentHandleBack,
-                    shape = RoundedCornerShape(50),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    modifier = Modifier.size(48.dp)
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Navigate back",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    // Back button
+                    Surface(
+                        onClick = currentHandleBack,
+                        shape = RoundedCornerShape(50),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowBack,
+                                contentDescription = "Navigate back",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    // Action buttons
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.height(48.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        ) {
+                            // Reminder button
+                            IconButton(onClick = {
+                                if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    val hasPermission = ContextCompat.checkSelfPermission(
+                                        context, Manifest.permission.POST_NOTIFICATIONS
+                                    ) == PackageManager.PERMISSION_GRANTED
+                                    if (!hasPermission) {
+                                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                        return@IconButton
+                                    }
+                                }
+                                showDatePicker = true
+                            }) {
+                                Icon(
+                                    Icons.Default.Notifications,
+                                    contentDescription = "Add Reminder",
+                                    tint = if (reminderTime != null) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            // Color picker button
+                            IconButton(onClick = {
+                                showColorPicker = !showColorPicker
+                                if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.Palette,
+                                    contentDescription = "Note color",
+                                    tint = if (selectedColorIndex != null) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            // Expanded menu (share, archive, delete)
+                            AnimatedVisibility(
+                                visible = showMenu,
+                                enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
+                                exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    val shareTitle = stringResource(R.string.share_via)
+                                    IconButton(onClick = {
+                                        if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        showMenu = false
+                                        currentSaveChanges()
+                                        val noteToShare = existingNote
+                                        if (noteToShare != null) {
+                                            val sendIntent = Intent().apply {
+                                                action = Intent.ACTION_SEND
+                                                val shareText = buildString {
+                                                    if (noteToShare.title.isNotBlank()) appendLine(noteToShare.title)
+                                                    if (noteToShare.title.isNotBlank() && noteToShare.content.isNotBlank()) appendLine()
+                                                    val formattedContent = if (noteToShare.isChecklist) {
+                                                        noteToShare.content.replace("[ ] ", "☐ ").replace("[x] ", "☑ ")
+                                                    } else noteToShare.content
+                                                    if (formattedContent.isNotBlank()) append(formattedContent)
+                                                }
+                                                putExtra(Intent.EXTRA_TEXT, shareText)
+                                                type = "text/plain"
+                                            }
+                                            val shareIntent = Intent.createChooser(sendIntent, shareTitle)
+                                            try {
+                                                context.startActivity(shareIntent)
+                                            } catch (e: android.content.ActivityNotFoundException) {
+                                                Toast.makeText(context, "No app found to share this note.", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    }) {
+                                        Icon(Icons.Default.Share, contentDescription = "Share note", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+
+                                    IconButton(onClick = {
+                                        if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        showMenu = false
+                                        currentSaveChanges()
+                                        existingNote?.let {
+                                            viewModel.archiveNote(it)
+                                            onNavigateBack()
+                                        }
+                                    }) {
+                                        Icon(Icons.Default.Archive, contentDescription = "Archive note", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+
+                                    IconButton(onClick = {
+                                        if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        showMenu = false
+                                        currentSaveChanges()
+                                        existingNote?.let {
+                                            viewModel.moveToTrash(it)
+                                            onNavigateBack()
+                                        }
+                                    }) {
+                                        Icon(Icons.Default.Delete, contentDescription = "Move to trash", tint = MaterialTheme.colorScheme.error)
+                                    }
+                                }
+                            }
+
+                            // More/close menu toggle
+                            IconButton(onClick = {
+                                showMenu = !showMenu
+                                if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            }) {
+                                Icon(
+                                    imageVector = if (showMenu) Icons.Default.ChevronRight else Icons.Default.MoreVert,
+                                    contentDescription = "Toggle options",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
                 }
 
-                Surface(
-                    shape = RoundedCornerShape(50),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    modifier = Modifier.height(48.dp)
+                // Color picker row
+                AnimatedVisibility(
+                    visible = showColorPicker,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 4.dp)
+                    LazyRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = {
-                            if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                val hasPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-                                if (!hasPermission) {
-                                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                    return@IconButton
+                        items(paletteColors.indices.toList()) { index ->
+                            val color = paletteColors[index]
+                            val colorIdx = if (color == null) null else index - 1
+                            val isSelected = selectedColorIndex == colorIdx
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(color ?: MaterialTheme.colorScheme.surfaceVariant)
+                                    .border(
+                                        width = if (isSelected) 2.dp else 1.dp,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
+                                        shape = CircleShape
+                                    )
+                                    .clickable {
+                                        selectedColorIndex = colorIdx
+                                        if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (color == null) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "No color",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(16.dp)
+                                    )
                                 }
                             }
-                            showDatePicker = true
-                        }) {
-                            Icon(
-                                Icons.Default.Notifications,
-                                contentDescription = "Add Reminder",
-                                tint = if (reminderTime != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        AnimatedVisibility(
-                            visible = showMenu,
-                            enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
-                            exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                val shareTitle = stringResource(R.string.share_via)
-                                IconButton(onClick = {
-                                    if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    showMenu = false
-                                    currentSaveChanges()
-                                    val noteToShare = existingNote
-                                    if (noteToShare != null) {
-                                        val sendIntent = Intent().apply {
-                                            action = Intent.ACTION_SEND
-                                            val shareText = buildString {
-                                                if (noteToShare.title.isNotBlank()) appendLine(noteToShare.title)
-                                                if (noteToShare.title.isNotBlank() && noteToShare.content.isNotBlank()) appendLine()
-                                                val formattedContent = if (noteToShare.isChecklist) {
-                                                    noteToShare.content.replace("[ ] ", "☐ ").replace("[x] ", "☑ ")
-                                                } else {
-                                                    noteToShare.content
-                                                }
-                                                if (formattedContent.isNotBlank()) append(formattedContent)
-                                            }
-                                            putExtra(Intent.EXTRA_TEXT, shareText)
-                                            type = "text/plain"
-                                        }
-                                        val shareIntent = Intent.createChooser(sendIntent, shareTitle)
-                                        try {
-                                            context.startActivity(shareIntent)
-                                        } catch (e: android.content.ActivityNotFoundException) {
-                                            Toast.makeText(context, "No app found to share this note.", Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                }) {
-                                    Icon(Icons.Default.Share, contentDescription = "Share note", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-
-                                IconButton(onClick = {
-                                    if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    showMenu = false
-                                    currentSaveChanges()
-                                    existingNote?.let {
-                                        viewModel.archiveNote(it)
-                                        onNavigateBack()
-                                    }
-                                }) {
-                                    Icon(Icons.Default.Archive, contentDescription = "Archive note", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-
-                                IconButton(onClick = {
-                                    if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    showMenu = false
-                                    currentSaveChanges()
-                                    existingNote?.let {
-                                        viewModel.moveToTrash(it)
-                                        onNavigateBack()
-                                    }
-                                }) {
-                                    Icon(Icons.Default.Delete, contentDescription = "Move to trash", tint = MaterialTheme.colorScheme.error)
-                                }
-                            }
-                        }
-
-                        IconButton(onClick = {
-                            showMenu = !showMenu
-                            if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        }) {
-                            Icon(
-                                imageVector = if (showMenu) Icons.Default.ChevronRight else Icons.Default.MoreVert,
-                                contentDescription = "Toggle options",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
                         }
                     }
                 }
@@ -468,7 +567,11 @@ fun NoteEditorScreen(
                 decorator = { innerTextField ->
                     Box {
                         if (titleState.text.isEmpty()) {
-                            Text(stringResource(R.string.title_hint), style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+                            Text(
+                                stringResource(R.string.title_hint),
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                            )
                         }
                         innerTextField()
                     }
@@ -527,9 +630,12 @@ fun NoteEditorScreen(
                     checklistItems.forEachIndexed { index, item ->
                         val itemFocusRequester = remember(item.id) { FocusRequester() }
                         checklistFocusRequesters[item.id] = itemFocusRequester
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                        ) {
                             Checkbox(checked = item.isChecked, onCheckedChange = {
                                 item.isChecked = it
                                 if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -545,7 +651,10 @@ fun NoteEditorScreen(
                                         itemToFocus = newItem.id
                                     } else item.text = newValue
                                 },
-                                textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface, textDecoration = if (item.isChecked) TextDecoration.LineThrough else null),
+                                textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    textDecoration = if (item.isChecked) TextDecoration.LineThrough else null
+                                ),
                                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                                 modifier = Modifier
                                     .weight(1f)
@@ -557,12 +666,15 @@ fun NoteEditorScreen(
                             }
                         }
                     }
-                    TextButton(onClick = {
-                        val newItem = ChecklistItemState("", false)
-                        checklistItems.add(newItem)
-                        itemToFocus = newItem.id
-                        if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    }, modifier = Modifier.padding(start = 4.dp, top = 8.dp)) {
+                    TextButton(
+                        onClick = {
+                            val newItem = ChecklistItemState("", false)
+                            checklistItems.add(newItem)
+                            itemToFocus = newItem.id
+                            if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        },
+                        modifier = Modifier.padding(start = 4.dp, top = 8.dp)
+                    ) {
                         Icon(Icons.Default.Add, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(R.string.add_item))
@@ -580,7 +692,11 @@ fun NoteEditorScreen(
                     decorator = { innerTextField ->
                         Box(modifier = Modifier.fillMaxSize()) {
                             if (contentState.text.isEmpty()) {
-                                Text(stringResource(R.string.note_hint), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+                                Text(
+                                    stringResource(R.string.note_hint),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                )
                             }
                             innerTextField()
                         }

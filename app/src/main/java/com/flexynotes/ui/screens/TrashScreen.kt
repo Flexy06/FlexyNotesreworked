@@ -193,8 +193,7 @@ fun TrashScreen(
                     val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
                     val colorIndex = note.colorIndex
                     val noteColor = if (colorIndex != null) {
-                        if (isOledMode && isDarkTheme) noteCardColorsDark[colorIndex % noteCardColorsDark.size]
-                        else if (isDarkTheme) noteCardColorsDark[colorIndex % noteCardColorsDark.size]
+                        if (isDarkTheme) noteCardColorsDark[colorIndex % noteCardColorsDark.size]
                         else noteCardColors[colorIndex % noteCardColors.size]
                     } else when {
                         isOledMode && isDarkTheme -> Color(0xFF0C0C0C)

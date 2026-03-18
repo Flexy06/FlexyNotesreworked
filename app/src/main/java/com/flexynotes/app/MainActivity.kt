@@ -454,6 +454,7 @@ fun FlexyNotesNavigation(
                     preferences = preferences,
                     onUpdatePreferences = onUpdatePreferences,
                     useHaptics = preferences.useHaptics,
+                    isSystemInDarkTheme = isSystemInDarkTheme(),
                     onOpenDrawer = { scope.launch { drawerState.open() } }
                 )
             }

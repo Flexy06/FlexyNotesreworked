@@ -44,6 +44,7 @@ fun SettingsScreen(
     preferences: UserPreferences,
     onUpdatePreferences: ((UserPreferences) -> UserPreferences) -> Unit,
     useHaptics: Boolean,
+    isSystemInDarkTheme: Boolean = false,
     onOpenDrawer: () -> Unit
 ) {
     val scrollState = rememberScrollState()
@@ -69,7 +70,13 @@ fun SettingsScreen(
             onUpdatePreferences = onUpdatePreferences,
             onNavigateBack = { showCloudSyncScreen = false }
         )
-        return // Stop rendering the rest of the SettingsScreen
+        return
+    }
+
+    val oledEnabled = when (preferences.themeMode) {
+        ThemeMode.LIGHT  -> false
+        ThemeMode.DARK   -> true
+        ThemeMode.SYSTEM -> isSystemInDarkTheme
     }
 
     Scaffold(
@@ -153,11 +160,9 @@ fun SettingsScreen(
                         title = stringResource(R.string.settings_oled),
                         subtitle = stringResource(R.string.settings_oled_desc),
                         checked = preferences.isOledMode,
-                        enabled = preferences.themeMode != ThemeMode.LIGHT,
+                        enabled = oledEnabled,
                         onCheckedChange = { newVal ->
-                            if (preferences.themeMode != ThemeMode.LIGHT) {
-                                onUpdatePreferences { it.copy(isOledMode = newVal) }
-                            }
+                            if (oledEnabled) onUpdatePreferences { it.copy(isOledMode = newVal) }
                         }
                     )
                 }
