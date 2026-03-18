@@ -153,7 +153,12 @@ fun SettingsScreen(
                         title = stringResource(R.string.settings_oled),
                         subtitle = stringResource(R.string.settings_oled_desc),
                         checked = preferences.isOledMode,
-                        onCheckedChange = { newVal -> onUpdatePreferences { it.copy(isOledMode = newVal) } }
+                        enabled = preferences.themeMode != ThemeMode.LIGHT,
+                        onCheckedChange = { newVal ->
+                            if (preferences.themeMode != ThemeMode.LIGHT) {
+                                onUpdatePreferences { it.copy(isOledMode = newVal) }
+                            }
+                        }
                     )
                 }
 
@@ -320,14 +325,19 @@ private fun SettingsGroup(title: String, content: @Composable () -> Unit) {
     }
 }
 
+
 @Composable
-private fun SwitchPreference(title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+private fun SwitchPreference(title: String, subtitle: String, checked: Boolean, enabled: Boolean = true, onCheckedChange: (Boolean) -> Unit) {
     ListItem(
-        headlineContent = { Text(title) },
-        supportingContent = { Text(subtitle) },
-        trailingContent = { Switch(checked = checked, onCheckedChange = onCheckedChange) },
+        headlineContent = {
+            Text(title, color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
+        },
+        supportingContent = {
+            Text(subtitle, color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f))
+        },
+        trailingContent = { Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled) },
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        modifier = Modifier.clickable { onCheckedChange(!checked) }
+        modifier = Modifier.clickable(enabled = enabled) { onCheckedChange(!checked) }
     )
 }
 

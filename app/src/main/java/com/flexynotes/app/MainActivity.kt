@@ -420,6 +420,7 @@ fun FlexyNotesNavigation(
                     isGridView = isGridView,
                     useHaptics = preferences.useHaptics,
                     isOledMode = preferences.isOledMode,
+                    isAnySyncEnabled = preferences.isWebDavSyncEnabled || preferences.isGoogleDriveSyncEnabled,
                     onGridViewToggle = { isGridView = !isGridView },
                     onNavigateToEditor = { noteId, isChecklist ->
                         navController.navigate("note_editor/${noteId ?: "-1"}?isChecklist=$isChecklist")

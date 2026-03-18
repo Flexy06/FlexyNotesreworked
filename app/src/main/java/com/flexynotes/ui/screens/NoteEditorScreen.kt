@@ -368,29 +368,29 @@ fun NoteEditorScreen(
                             )
                         }
 
-                        if (existingNote != null) {
-                            AnimatedVisibility(
-                                visible = showMenu,
-                                enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
-                                exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    val shareTitle = stringResource(R.string.share_via)
-                                    IconButton(onClick = {
-                                        if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        showMenu = false
+                        AnimatedVisibility(
+                            visible = showMenu,
+                            enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
+                            exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                val shareTitle = stringResource(R.string.share_via)
+                                IconButton(onClick = {
+                                    if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    showMenu = false
+                                    currentSaveChanges()
+                                    val noteToShare = existingNote
+                                    if (noteToShare != null) {
                                         val sendIntent = Intent().apply {
                                             action = Intent.ACTION_SEND
                                             val shareText = buildString {
-                                                if (existingNote!!.title.isNotBlank()) appendLine(existingNote!!.title)
-                                                if (existingNote!!.title.isNotBlank() && existingNote!!.content.isNotBlank()) appendLine()
-
-                                                val formattedContent = if (existingNote!!.isChecklist) {
-                                                    existingNote!!.content.replace("[ ] ", "☐ ").replace("[x] ", "☑ ")
+                                                if (noteToShare.title.isNotBlank()) appendLine(noteToShare.title)
+                                                if (noteToShare.title.isNotBlank() && noteToShare.content.isNotBlank()) appendLine()
+                                                val formattedContent = if (noteToShare.isChecklist) {
+                                                    noteToShare.content.replace("[ ] ", "☐ ").replace("[x] ", "☑ ")
                                                 } else {
-                                                    existingNote!!.content
+                                                    noteToShare.content
                                                 }
-
                                                 if (formattedContent.isNotBlank()) append(formattedContent)
                                             }
                                             putExtra(Intent.EXTRA_TEXT, shareText)
@@ -400,52 +400,48 @@ fun NoteEditorScreen(
                                         try {
                                             context.startActivity(shareIntent)
                                         } catch (e: android.content.ActivityNotFoundException) {
-                                            Toast.makeText(
-                                                context,
-                                                "No app found to share this note.",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
+                                            Toast.makeText(context, "No app found to share this note.", Toast.LENGTH_SHORT).show()
                                         }
-                                    }) {
-                                        Icon(Icons.Default.Share, contentDescription = "Share note", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
+                                }) {
+                                    Icon(Icons.Default.Share, contentDescription = "Share note", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
 
-                                    IconButton(onClick = {
-                                        if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        showMenu = false
-                                        currentSaveChanges()
-                                        existingNote?.let {
-                                            viewModel.archiveNote(it)
-                                        }
+                                IconButton(onClick = {
+                                    if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    showMenu = false
+                                    currentSaveChanges()
+                                    existingNote?.let {
+                                        viewModel.archiveNote(it)
                                         onNavigateBack()
-                                    }) {
-                                        Icon(Icons.Default.Archive, contentDescription = "Archive note", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
+                                }) {
+                                    Icon(Icons.Default.Archive, contentDescription = "Archive note", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
 
-                                    IconButton(onClick = {
-                                        if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        showMenu = false
-                                        currentSaveChanges()
-                                        existingNote?.let {
-                                            viewModel.moveToTrash(it)
-                                        }
+                                IconButton(onClick = {
+                                    if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    showMenu = false
+                                    currentSaveChanges()
+                                    existingNote?.let {
+                                        viewModel.moveToTrash(it)
                                         onNavigateBack()
-                                    }) {
-                                        Icon(Icons.Default.Delete, contentDescription = "Move to trash", tint = MaterialTheme.colorScheme.error)
                                     }
+                                }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Move to trash", tint = MaterialTheme.colorScheme.error)
                                 }
                             }
+                        }
 
-                            IconButton(onClick = {
-                                showMenu = !showMenu
-                                if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            }) {
-                                Icon(
-                                    imageVector = if (showMenu) Icons.Default.ChevronRight else Icons.Default.MoreVert,
-                                    contentDescription = "Toggle options",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                        IconButton(onClick = {
+                            showMenu = !showMenu
+                            if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        }) {
+                            Icon(
+                                imageVector = if (showMenu) Icons.Default.ChevronRight else Icons.Default.MoreVert,
+                                contentDescription = "Toggle options",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }

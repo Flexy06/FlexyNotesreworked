@@ -92,6 +92,7 @@ fun NotesListScreen(
     isGridView: Boolean,
     useHaptics: Boolean,
     isOledMode: Boolean = false,
+    isAnySyncEnabled: Boolean = false,
     onGridViewToggle: () -> Unit,
     onNavigateToEditor: (String?, Boolean) -> Unit,
     onOpenDrawer: () -> Unit
@@ -398,12 +399,14 @@ fun NotesListScreen(
                                 isRefreshing = true
                                 if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
 
-                                // Trigger background sync
-                                SyncManager.triggerImmediateDownload(context)
-                                SyncManager.triggerImmediateUpload(context)
-                                Toast.makeText(context, "Syncing...", Toast.LENGTH_SHORT).show()
+                                if (isAnySyncEnabled) {
+                                    SyncManager.triggerImmediateDownload(context)
+                                    SyncManager.triggerImmediateUpload(context)
+                                    Toast.makeText(context, "Syncing...", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "No cloud sync configured", Toast.LENGTH_SHORT).show()
+                                }
 
-                                // Simulate network delay for the UI spinner to look smooth
                                 coroutineScope.launch {
                                     delay(1500)
                                     isRefreshing = false
