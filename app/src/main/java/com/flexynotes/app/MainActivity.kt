@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -299,14 +300,15 @@ fun FlexyNotesNavigation(
         drawerState = drawerState,
         gesturesEnabled = gesturesEnabled,
         drawerContent = {
-            ModalDrawerSheet {
-                Spacer(Modifier.height(32.dp))
+            ModalDrawerSheet(
+                drawerContainerColor = MaterialTheme.colorScheme.surface,
+            ) {
                 Text(
                     text = stringResource(R.string.app_name),
                     style = MaterialTheme.typography.headlineMedium,
-                    modifier = Modifier.padding(16.dp)
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 32.dp)
                 )
-                Spacer(Modifier.height(16.dp))
 
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Edit, contentDescription = null) },
@@ -360,6 +362,7 @@ fun FlexyNotesNavigation(
                 Spacer(modifier = Modifier.weight(1f))
 
                 NavigationDrawerItem(
+
                     icon = { Icon(Icons.Default.Settings, contentDescription = null) },
                     label = { Text(stringResource(R.string.nav_settings)) },
                     selected = currentRoute == "settings",
@@ -416,6 +419,7 @@ fun FlexyNotesNavigation(
                     viewModel = viewModel,
                     isGridView = isGridView,
                     useHaptics = preferences.useHaptics,
+                    isOledMode = preferences.isOledMode,
                     onGridViewToggle = { isGridView = !isGridView },
                     onNavigateToEditor = { noteId, isChecklist ->
                         navController.navigate("note_editor/${noteId ?: "-1"}?isChecklist=$isChecklist")
@@ -429,6 +433,7 @@ fun FlexyNotesNavigation(
                     viewModel = viewModel,
                     isGridView = isGridView,
                     useHaptics = preferences.useHaptics,
+                    isOledMode = preferences.isOledMode,
                     onOpenDrawer = { scope.launch { drawerState.open() } },
                     onNavigateToEditor = { noteId -> navController.navigate("note_editor/${noteId}?isChecklist=false") }
                 )
@@ -439,6 +444,7 @@ fun FlexyNotesNavigation(
                     viewModel = viewModel,
                     isGridView = isGridView,
                     useHaptics = preferences.useHaptics,
+                    isOledMode = preferences.isOledMode,
                     onOpenDrawer = { scope.launch { drawerState.open() } }
                 )
             }

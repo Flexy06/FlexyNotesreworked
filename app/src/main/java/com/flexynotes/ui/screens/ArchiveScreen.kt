@@ -19,11 +19,16 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material3.*
+import androidx.compose.material.icons.filled.CheckBox
+import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
@@ -41,13 +46,12 @@ fun ArchiveScreen(
     viewModel: NotesViewModel,
     isGridView: Boolean,
     useHaptics: Boolean,
+    isOledMode: Boolean = false,
     onOpenDrawer: () -> Unit,
-    // Changed Long to String
     onNavigateToEditor: (String) -> Unit
 ) {
     val archivedNotes by viewModel.archivedNotes.collectAsStateWithLifecycle()
 
-    // Changed Set<Long> to Set<String>
     var selectedNoteIds by remember { mutableStateOf(setOf<String>()) }
     val haptic = LocalHapticFeedback.current
     val density = LocalDensity.current
@@ -159,6 +163,28 @@ fun ArchiveScreen(
                     val isSwiping = dismissState.dismissDirection != SwipeToDismissBoxValue.Settled ||
                             dismissState.targetValue != SwipeToDismissBoxValue.Settled
 
+                    val noteCardColors = listOf(
+                        Color(0xFFE8F5E9), Color(0xFFFFF8E1), Color(0xFFE3F2FD),
+                        Color(0xFFFCE4EC), Color(0xFFEDE7F6), Color(0xFFE0F7FA),
+                        Color(0xFFFFF3E0), Color(0xFFF3E5F5),
+                    )
+                    val noteCardColorsDark = listOf(
+                        Color(0xFF1B2E1E), Color(0xFF2E2A14), Color(0xFF152130),
+                        Color(0xFF2E1820), Color(0xFF1E1A2E), Color(0xFF122428),
+                        Color(0xFF2E2418), Color(0xFF271A2E),
+                    )
+                    val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
+                    val colorIndex = note.colorIndex
+                    val noteColor = if (colorIndex != null) {
+                        if (isOledMode && isDarkTheme) noteCardColorsDark[colorIndex % noteCardColorsDark.size]
+                        else if (isDarkTheme) noteCardColorsDark[colorIndex % noteCardColorsDark.size]
+                        else noteCardColors[colorIndex % noteCardColors.size]
+                    } else when {
+                        isOledMode && isDarkTheme -> Color(0xFF0C0C0C)
+                        isDarkTheme               -> Color(0xFF242426)
+                        else                      -> Color(0xFFF1F2F5)
+                    }
+
                     SwipeToDismissBox(
                         state = dismissState,
                         modifier = Modifier.zIndex(if (isSwiping) 1f else 0f),
@@ -193,15 +219,73 @@ fun ArchiveScreen(
                                             }
                                         }
                                     ),
-                                border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                                colors = CardDefaults.cardColors(containerColor = if (isSelected) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface)
-                            ) {
+                                        border = if (isSelected) {
+                                    BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+                                } else {
+                                    BorderStroke(
+                                        width = 1.dp,
+                                        color = when {
+                                            isOledMode && isDarkTheme -> Color.White.copy(alpha = 0.12f)
+                                            isDarkTheme               -> Color.White.copy(alpha = 0.10f)
+                                            else                      -> Color.Black.copy(alpha = 0.12f)
+                                        }
+                                    )
+                                },
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else noteColor
+                                )
+
+
+
+                            ){
                                 Column(modifier = Modifier.padding(16.dp)) {
                                     Text(text = note.title.ifEmpty { stringResource(R.string.untitled) }, style = MaterialTheme.typography.titleMedium)
-                                    if (note.content.isNotBlank()) {
+                                    if (note.isChecklist) {
+                                        val checklistItems = note.content.lines()
+                                            .filter { it.startsWith("[ ] ") || it.startsWith("[x] ") }
+                                            .take(5)
+                                        if (checklistItems.isNotEmpty()) {
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            checklistItems.forEach { line ->
+                                                val isChecked = line.startsWith("[x] ")
+                                                val label = if (isChecked) line.removePrefix("[x] ") else line.removePrefix("[ ] ")
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(vertical = 1.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = if (isChecked) Icons.Default.CheckBox else Icons.Default.CheckBoxOutlineBlank,
+                                                        contentDescription = null,
+                                                        tint = if (isChecked)
+                                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                                                        else
+                                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                                        modifier = Modifier.size(14.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    Text(
+                                                        text = label,
+                                                        style = if (isChecked)
+                                                            MaterialTheme.typography.bodyMedium.copy(
+                                                                textDecoration = TextDecoration.LineThrough
+                                                            )
+                                                        else
+                                                            MaterialTheme.typography.bodyMedium,
+                                                        color = if (isChecked)
+                                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                                        else
+                                                            MaterialTheme.colorScheme.onSurface,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    } else if (note.content.isNotBlank()) {
                                         Spacer(modifier = Modifier.height(4.dp))
-                                        val displayContent = if (note.isChecklist) note.content.replace("[ ] ", "☐ ").replace("[x] ", "☑ ") else note.content
-                                        Text(text = displayContent, style = MaterialTheme.typography.bodyMedium, maxLines = 5)
+                                        Text(text = note.content, style = MaterialTheme.typography.bodyMedium, maxLines = 5)
                                     }
                                 }
                             }
@@ -209,6 +293,7 @@ fun ArchiveScreen(
                     )
                 }
             }
+
         }
     }
 }

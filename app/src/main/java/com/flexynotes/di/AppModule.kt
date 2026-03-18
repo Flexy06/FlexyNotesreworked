@@ -17,7 +17,6 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object AppModule {
 
-    // Migration from version 5 to 6 to change ID type to TEXT
     private val MIGRATION_5_6 = object : Migration(5, 6) {
         override fun migrate(database: SupportSQLiteDatabase) {
             database.execSQL(
@@ -52,12 +51,17 @@ object AppModule {
         }
     }
 
-    // NEW: Migration from version 6 to 7 to create the tombstones table
     private val MIGRATION_6_7 = object : Migration(6, 7) {
         override fun migrate(database: SupportSQLiteDatabase) {
             database.execSQL(
                 "CREATE TABLE IF NOT EXISTS `tombstones` (`noteId` TEXT NOT NULL, `deletedAt` INTEGER NOT NULL, PRIMARY KEY(`noteId`))"
             )
+        }
+    }
+
+    private val MIGRATION_7_8 = object : Migration(7, 8) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE `notes` ADD COLUMN `colorIndex` INTEGER")
         }
     }
 
@@ -69,7 +73,7 @@ object AppModule {
             NoteDatabase::class.java,
             "flexy_notes_db"
         )
-            .addMigrations(MIGRATION_5_6, MIGRATION_6_7) // Added the new migration here
+            .addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
             .build()
     }
 

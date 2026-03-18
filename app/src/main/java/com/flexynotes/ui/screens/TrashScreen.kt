@@ -14,6 +14,10 @@ import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material3.*
+import androidx.compose.material.icons.filled.CheckBox
+import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -22,6 +26,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
@@ -37,6 +43,7 @@ fun TrashScreen(
     viewModel: NotesViewModel,
     isGridView: Boolean,
     useHaptics: Boolean,
+    isOledMode: Boolean = false,
     onOpenDrawer: () -> Unit
 ) {
     val deletedNotes by viewModel.deletedNotes.collectAsStateWithLifecycle()
@@ -172,6 +179,30 @@ fun TrashScreen(
                 items(deletedNotes, key = { it.id }) { note ->
                     val isSelected = selectedNoteIds.contains(note.id)
 
+
+                    val noteCardColors = listOf(
+                        Color(0xFFE8F5E9), Color(0xFFFFF8E1), Color(0xFFE3F2FD),
+                        Color(0xFFFCE4EC), Color(0xFFEDE7F6), Color(0xFFE0F7FA),
+                        Color(0xFFFFF3E0), Color(0xFFF3E5F5),
+                    )
+                    val noteCardColorsDark = listOf(
+                        Color(0xFF1B2E1E), Color(0xFF2E2A14), Color(0xFF152130),
+                        Color(0xFF2E1820), Color(0xFF1E1A2E), Color(0xFF122428),
+                        Color(0xFF2E2418), Color(0xFF271A2E),
+                    )
+                    val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
+                    val colorIndex = note.colorIndex
+                    val noteColor = if (colorIndex != null) {
+                        if (isOledMode && isDarkTheme) noteCardColorsDark[colorIndex % noteCardColorsDark.size]
+                        else if (isDarkTheme) noteCardColorsDark[colorIndex % noteCardColorsDark.size]
+                        else noteCardColors[colorIndex % noteCardColors.size]
+                    } else when {
+                        isOledMode && isDarkTheme -> Color(0xFF0C0C0C)
+                        isDarkTheme               -> Color(0xFF242426)
+                        else                      -> Color(0xFFF1F2F5)
+                    }
+
+
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -191,10 +222,17 @@ fun TrashScreen(
                         border = if (isSelected) {
                             BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
                         } else {
-                            BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                            BorderStroke(
+                                width = 1.dp,
+                                color = when {
+                                    isOledMode && isDarkTheme -> Color.White.copy(alpha = 0.12f)
+                                    isDarkTheme               -> Color.White.copy(alpha = 0.10f)
+                                    else                      -> Color.Black.copy(alpha = 0.12f)
+                                }
+                            )
                         },
                         colors = CardDefaults.cardColors(
-                            containerColor = if (isSelected) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface
+                            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else noteColor
                         )
                     ) {
                         Column(
@@ -206,17 +244,53 @@ fun TrashScreen(
                                 text = note.title.ifEmpty { stringResource(R.string.untitled) },
                                 style = MaterialTheme.typography.titleMedium
                             )
-                            if (note.content.isNotBlank()) {
-                                Spacer(modifier = Modifier.height(4.dp))
-
-                                val displayContent = if (note.isChecklist) {
-                                    note.content.replace("[ ] ", "☐ ").replace("[x] ", "☑ ")
-                                } else {
-                                    note.content
+                            if (note.isChecklist) {
+                                val checklistItems = note.content.lines()
+                                    .filter { it.startsWith("[ ] ") || it.startsWith("[x] ") }
+                                    .take(5)
+                                if (checklistItems.isNotEmpty()) {
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    checklistItems.forEach { line ->
+                                        val isChecked = line.startsWith("[x] ")
+                                        val label = if (isChecked) line.removePrefix("[x] ") else line.removePrefix("[ ] ")
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 1.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = if (isChecked) Icons.Default.CheckBox else Icons.Default.CheckBoxOutlineBlank,
+                                                contentDescription = null,
+                                                tint = if (isChecked)
+                                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                                                else
+                                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = label,
+                                                style = if (isChecked)
+                                                    MaterialTheme.typography.bodyMedium.copy(
+                                                        textDecoration = TextDecoration.LineThrough
+                                                    )
+                                                else
+                                                    MaterialTheme.typography.bodyMedium,
+                                                color = if (isChecked)
+                                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                                else
+                                                    MaterialTheme.colorScheme.onSurface,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
                                 }
-
+                            } else if (note.content.isNotBlank()) {
+                                Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = displayContent,
+                                    text = note.content,
                                     style = MaterialTheme.typography.bodyMedium,
                                     maxLines = 5
                                 )

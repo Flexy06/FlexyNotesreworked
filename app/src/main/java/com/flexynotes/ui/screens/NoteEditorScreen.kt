@@ -519,7 +519,11 @@ fun NoteEditorScreen(
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
             } else {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
             }
 
             if (actualIsChecklist) {
