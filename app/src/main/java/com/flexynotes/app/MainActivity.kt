@@ -100,11 +100,8 @@ class MainActivity : AppCompatActivity() {
 
             LaunchedEffect(Unit) {
                 crashLog = CrashReporter.getCrashLog(context)
+                isDataStoreLoaded = true
 
-                if (!isDataStoreLoaded) {
-                    delay(100)
-                    isDataStoreLoaded = true
-                }
             }
 
             // Sync logic based on user preferences
@@ -399,18 +396,16 @@ fun FlexyNotesNavigation(
             navController = navController,
             startDestination = "notes_list",
             enterTransition = {
-                fadeIn(animationSpec = tween(220, delayMillis = 90)) +
-                        scaleIn(initialScale = 0.95f, animationSpec = tween(220, delayMillis = 90))
+                fadeIn(animationSpec = tween(180))
             },
             exitTransition = {
-                fadeOut(animationSpec = tween(150))
+                fadeOut(animationSpec = tween(120))
             },
             popEnterTransition = {
-                fadeIn(animationSpec = tween(220, delayMillis = 90)) +
-                        scaleIn(initialScale = 0.95f, animationSpec = tween(220, delayMillis = 90))
+                fadeIn(animationSpec = tween(180))
             },
             popExitTransition = {
-                fadeOut(animationSpec = tween(150))
+                fadeOut(animationSpec = tween(120))
             }
         ) {
             composable("notes_list") {

@@ -243,8 +243,8 @@ fun NoteEditorScreen(
 
     LaunchedEffect(noteId) {
         if (noteId == null || noteId == "-1") {
-            delay(100)
             if (!actualIsChecklist) {
+                delay(50)
                 try {
                     contentFocusRequester.requestFocus()
                 } catch (_: Exception) {}

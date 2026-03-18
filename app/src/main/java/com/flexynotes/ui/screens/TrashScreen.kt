@@ -167,6 +167,18 @@ fun TrashScreen(
                 Text(stringResource(R.string.trash_empty))
             }
         } else {
+            val noteCardColors = listOf(
+                Color(0xFFE8F5E9), Color(0xFFFFF8E1), Color(0xFFE3F2FD),
+                Color(0xFFFCE4EC), Color(0xFFEDE7F6), Color(0xFFE0F7FA),
+                Color(0xFFFFF3E0), Color(0xFFF3E5F5),
+            )
+            val noteCardColorsDark = listOf(
+                Color(0xFF1B2E1E), Color(0xFF2E2A14), Color(0xFF152130),
+                Color(0xFF2E1820), Color(0xFF1E1A2E), Color(0xFF122428),
+                Color(0xFF2E2418), Color(0xFF271A2E),
+            )
+            val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
+
             LazyVerticalStaggeredGrid(
                 columns = StaggeredGridCells.Fixed(if (isGridView) 2 else 1),
                 modifier = Modifier
@@ -180,18 +192,9 @@ fun TrashScreen(
                     val isSelected = selectedNoteIds.contains(note.id)
 
 
-                    val noteCardColors = listOf(
-                        Color(0xFFE8F5E9), Color(0xFFFFF8E1), Color(0xFFE3F2FD),
-                        Color(0xFFFCE4EC), Color(0xFFEDE7F6), Color(0xFFE0F7FA),
-                        Color(0xFFFFF3E0), Color(0xFFF3E5F5),
-                    )
-                    val noteCardColorsDark = listOf(
-                        Color(0xFF1B2E1E), Color(0xFF2E2A14), Color(0xFF152130),
-                        Color(0xFF2E1820), Color(0xFF1E1A2E), Color(0xFF122428),
-                        Color(0xFF2E2418), Color(0xFF271A2E),
-                    )
-                    val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
                     val colorIndex = note.colorIndex
+
+
                     val noteColor = if (colorIndex != null) {
                         if (isDarkTheme) noteCardColorsDark[colorIndex % noteCardColorsDark.size]
                         else noteCardColors[colorIndex % noteCardColors.size]
